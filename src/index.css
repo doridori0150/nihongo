@@ -1732,3 +1732,35 @@ textarea.input {
 .wt-word.xlong {
   font-size: 15px;
 }
+
+/* in-page confirm */
+.sheet.confirm {
+  max-width: 420px;
+  padding-top: 20px;
+}
+.confirm-title {
+  font-size: 18px;
+  font-weight: 800;
+}
+.confirm-body {
+  color: var(--muted);
+  margin-top: 6px;
+  line-height: 1.6;
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+/* inside claude.ai: the viewer pads :root by the safe-area insets already */
+.in-claude .topbar {
+  top: env(safe-area-inset-top, 0px);
+}
+.in-claude .topbar-inner {
+  padding-top: 10px;
+}
+.in-claude .lesson-top {
+  padding-top: calc(12px + env(safe-area-inset-top, 0px));
+}

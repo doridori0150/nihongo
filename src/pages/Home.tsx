@@ -9,6 +9,7 @@ import { addDays, diffDays, formatKo, today } from '../lib/date';
 import { CHANNELS, dajareOf, langChanSearch, ytSearch } from '../lib/fun';
 import { type Light, type LevelProgress, levelLabel, levelProgress, overall, signals } from '../lib/level';
 import { requestAi } from '../lib/nav';
+import { inClaude } from '../lib/runtime';
 import {
   extraWordsSession,
   grammarSession,
@@ -368,7 +369,7 @@ function ReviewSection({ content, start, go }: { content: Content; start: Props[
 function TalkSection({ situation, done, go }: { situation: Situation; done: boolean; go: Props['go'] }) {
   const [showKo, setShowKo] = useState(false);
   const [showSample, setShowSample] = useState(false);
-  const hasKey = !!getApiKey();
+  const hasKey = inClaude || !!getApiKey();
   const open = (start: Parameters<typeof requestAi>[0]) => {
     requestAi(start);
     go('ai');
@@ -421,7 +422,7 @@ function TalkSection({ situation, done, go }: { situation: Situation; done: bool
           모범 답안 보기
         </button>
       )}
-      {!hasKey && <div className="small muted">💡 설정에서 Anthropic API 키를 넣으면 Claude가 답을 채점해 줘요.</div>}
+      {!hasKey && <div className="small muted">💡 설정에서 Anthropic API 키를 넣거나 claude.ai 버전에서 열면 Claude가 답을 채점해 줘요.</div>}
     </Section>
   );
 }

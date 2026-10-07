@@ -1,5 +1,8 @@
-// Progress sync through a private (secret) GitHub Gist owned by the user.
+// Progress sync. On GitHub Pages: a private (secret) GitHub Gist owned by the user.
+// Inside a claude.ai Artifact: the viewer's private db subtree (data/users/<id>/...).
 import { useSyncExternalStore } from 'react';
+import { addDays, today } from './date';
+import { type DocRef, getDb, getUser, inClaude } from './runtime';
 import { getProgress, local, mergeProgress, onLocalChange, replaceFromSync, type Progress } from './store';
 
 const FILE = 'nihongo-daily-progress.json';
@@ -14,7 +17,7 @@ export type SyncStatus =
   | { state: 'syncing' }
   | { state: 'error'; message: string };
 
-let status: SyncStatus = local.get(TOKEN_KEY) ? { state: 'idle', at: 0 } : { state: 'off' };
+let status: SyncStatus = inClaude || local.get(TOKEN_KEY) ? { state: 'idle', at: 0 } : { state: 'off' };
 const listeners = new Set<() => void>();
 function setStatus(s: SyncStatus) {
   status = s;
@@ -98,12 +101,72 @@ async function writeGist(id: string, p: Progress) {
   await gh(`/gists/${id}`, { method: 'PATCH', body: JSON.stringify({ files: { [FILE]: { content: JSON.stringify(p) } } }) });
 }
 
+// ───────── claude.ai account storage ─────────
+
+let claudeRefs: Promise<{ core: DocRef; ai: DocRef } | null> | null = null;
+let readOnly = false;
+const READ_ONLY = '이 공유 권한으로는 계정에 저장할 수 없어서, 기록은 이 브라우저에만 남아요.';
+let lastCore = '';
+let lastAi = '';
+
+function claudeDocs() {
+  claudeRefs ??= (async () => {
+    const [db, user] = await Promise.all([getDb(), getUser()]);
+    const id = user ? await user.id().catch(() => null) : null;
+    return db && id ? { core: db.doc(`data/users/${id}/progress`), ai: db.doc(`data/users/${id}/ailog`) } : null;
+  })();
+  return claudeRefs;
+}
+
+/** Keep the stored document well under the 256 KiB cap: old day plans are not needed. */
+function storedCore(p: Progress) {
+  const cutoff = addDays(today(), -45);
+  const { ai: _ai, ...core } = p;
+  void _ai;
+  return { ...core, days: Object.fromEntries(Object.entries(core.days).filter(([d]) => d >= cutoff)) };
+}
+
+async function syncClaude() {
+  const refs = await claudeDocs();
+  if (!refs) throw new Error('이 화면에서는 Claude 계정 저장을 쓸 수 없어서 이 브라우저에만 저장돼요.');
+  const [c, a] = await Promise.all([refs.core.get(), refs.ai.get()]);
+  if (c.exists) {
+    const core = c.data() as unknown as Omit<Progress, 'ai'>;
+    const ai = ((a.exists ? a.data()?.entries : null) ?? []) as Progress['ai'];
+    lastCore ||= JSON.stringify(core);
+    lastAi ||= JSON.stringify(ai);
+    replaceFromSync(mergeProgress(getProgress(), { ...core, ai }));
+  }
+  if (readOnly) throw new Error(READ_ONLY);
+  const merged = getProgress();
+  const core = storedCore(merged);
+  const coreStr = JSON.stringify(core);
+  const aiStr = JSON.stringify(merged.ai);
+  try {
+    if (coreStr !== lastCore) {
+      await refs.core.set(core as unknown as Record<string, unknown>);
+      lastCore = coreStr;
+    }
+    if (aiStr !== lastAi) {
+      await refs.ai.set({ entries: merged.ai });
+      lastAi = aiStr;
+    }
+  } catch (e) {
+    if ((e as { code?: string }).code === 'invalid_argument') {
+      // view-only sharing: the viewer may read but not write their own subtree
+      readOnly = true;
+      throw new Error(READ_ONLY);
+    }
+    throw new Error(`Claude 계정 저장 실패 (${(e as { code?: string }).code ?? 'unknown'})`);
+  }
+}
+
 let running: Promise<void> | null = null;
 let again = false;
 
 /** Pull → merge → push. Safe to call often; concurrent calls coalesce. */
 export function syncNow(): Promise<void> {
-  if (!getToken()) {
+  if (!inClaude && !getToken()) {
     setStatus({ state: 'off' });
     return Promise.resolve();
   }
@@ -114,6 +177,11 @@ export function syncNow(): Promise<void> {
   running = (async () => {
     setStatus({ state: 'syncing' });
     try {
+      if (inClaude) {
+        await syncClaude();
+        setStatus({ state: 'idle', at: Date.now() });
+        return;
+      }
       let id = local.get(GIST_KEY);
       if (!id) {
         id = await findGist();
@@ -154,7 +222,7 @@ export function syncNow(): Promise<void> {
 let timer: ReturnType<typeof setTimeout> | undefined;
 let pending = false;
 function schedule(delay = 4000) {
-  if (!getToken()) return;
+  if (!inClaude && !getToken()) return;
   clearTimeout(timer);
   pending = true;
   timer = setTimeout(() => {

@@ -8,6 +8,7 @@ import { OOPS, PRAISE, comboText, completeQuip, pickOne } from '../lib/fun';
 import { type ItemResult, useProgress } from '../lib/store';
 import { type Answer, AssembleView, ChoiceView, ClozeView, isCorrect } from './exercises';
 import { ItemCard } from './ItemCard';
+import { askConfirm } from './confirm';
 
 export interface LessonResult {
   items: ItemResult[];
@@ -119,7 +120,10 @@ export function Lesson({ title, exercises, content, onFinish, onExit }: Props) {
   }, [ex, checked, finished, next, check, advanceIntro, onExit]);
 
   const exit = () => {
-    if (finished || confirm('학습을 그만둘까요? 이번 레슨 진행 상황은 저장되지 않아요.')) onExit();
+    if (finished) return onExit();
+    void askConfirm({ title: '학습을 그만둘까요?', body: '이번 레슨 진행 상황은 저장되지 않아요.', ok: '그만두기', cancel: '계속 학습', danger: true }).then(
+      (ok) => ok && onExit(),
+    );
   };
 
   if (finished) return <Complete title={title} xp={finished.xp} result={finished.result} content={content} onExit={onExit} />;

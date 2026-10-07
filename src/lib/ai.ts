@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { z } from 'zod';
 import { getApiKey, MODEL } from './aiKey';
+import { type SampleError, getSample, inClaude } from './runtime';
 
 function client() {
   const apiKey = getApiKey();
@@ -118,14 +119,98 @@ function describeTask(t: GradeTask): string {
   }
 }
 
+// ───────── claude.ai account (Artifact `sample` capability) ─────────
+
+export type AiMode = 'claude' | 'apikey' | 'none';
+
+/** Inside claude.ai the viewer's own account answers; elsewhere the user's API key. */
+export async function aiMode(): Promise<AiMode> {
+  if (inClaude) return (await getSample()) ? 'claude' : 'none';
+  return getApiKey() ? 'apikey' : 'none';
+}
+
+const SAMPLE_ERRORS: Record<string, string> = {
+  not_granted: 'Claude 사용이 허용되지 않았어요. 페이지를 새로 열고 허용을 눌러 주세요.',
+  sampling_disabled: '이 계정에서는 Claude를 쓸 수 없어요.',
+  rate_limited: 'Claude 사용량 한도에 걸렸어요. 잠시 후 다시 시도해 주세요.',
+  session_expired: 'claude.ai에 다시 로그인해 주세요.',
+  refused: 'Claude가 이 답변을 거절했어요. 다른 문제로 해 봐요.',
+  invalid_json: 'AI 응답 형식이 맞지 않았어요. 다시 시도해 주세요.',
+  empty_completion: 'AI가 빈 답을 보냈어요. 다시 시도해 주세요.',
+  upstream_error: '일시적인 오류예요. 다시 시도해 주세요.',
+};
+
+async function sampleJson<S extends z.ZodType>(
+  schema: S,
+  input: string | { role: 'user' | 'assistant'; content: string }[],
+  modelTier: 'quick' | 'default',
+  cache: boolean,
+): Promise<z.infer<S>> {
+  const sample = await getSample();
+  if (!sample) throw new Error('이 화면에서는 Claude를 쓸 수 없어요.');
+  let raw: unknown;
+  try {
+    raw = await sample.json(input, { modelTier, cache });
+  } catch (e) {
+    const code = (e as SampleError).code;
+    throw new Error(SAMPLE_ERRORS[code] ?? `Claude 오류 (${code ?? 'unknown'})`);
+  }
+  const parsed = schema.safeParse(raw);
+  if (!parsed.success) throw new Error('AI 응답 형식이 맞지 않았어요. 다시 시도해 주세요.');
+  return parsed.data;
+}
+
+// Lenient copies of the schemas for free-form JSON replies.
+const LoosePoint = Point.extend({ kind: Point.shape.kind.catch('naturalness') });
+const LooseGrade = GradeSchema.extend({
+  score: z.coerce.number(),
+  verdict: GradeSchema.shape.verdict.catch('okay'),
+  better: z.array(z.string()).catch([]),
+  points: z.array(LoosePoint).catch([]),
+});
+const LooseTurn = TurnSchema.extend({
+  reply_ko: z.string().catch(''),
+  correction: TurnSchema.shape.correction.catch({ needed: false, fixed: '', explain: '' }),
+  goal_done: z.boolean().catch(false),
+});
+const LooseEval = RoleplayEvalSchema.extend({
+  score: z.coerce.number(),
+  good: z.array(z.string()).catch([]),
+  points: z.array(LoosePoint).catch([]),
+  expressions: RoleplayEvalSchema.shape.expressions.catch([]),
+});
+
+const GRADE_FORMAT = `次のJSONオブジェクトだけを返す:
+{"score": 0〜100の整数, "verdict": "perfect"|"good"|"okay"|"needs_work",
+ "corrected": "自然に直した文(ふりがなJText形式)", "better": ["別の自然な言い方(JText)"],
+ "points": [{"kind": "grammar"|"vocab"|"politeness"|"naturalness"|"spelling"|"content", "original": "...", "fix": "...", "explain": "韓国語で説明"}],
+ "feedback": "韓国語の総評(2〜4文)"}`;
+
+const TURN_FORMAT = `毎回、次のJSONオブジェクトだけを返す:
+{"reply": "キャラクターの返事(JText形式、1〜3文)", "reply_ko": "韓国語訳",
+ "correction": {"needed": true|false, "fixed": "直した学習者の発言(JText)か空文字", "explain": "韓国語の短い説明か空文字"},
+ "goal_done": true|false}`;
+
+const EVAL_FORMAT = `次のJSONオブジェクトだけを返す:
+{"score": 0〜100の整数, "summary": "韓国語の総評(3〜5文)", "good": ["良かった点(韓国語)"],
+ "points": [{"kind": "grammar"|"vocab"|"politeness"|"naturalness"|"spelling"|"content", "original": "...", "fix": "...", "explain": "韓国語"}],
+ "expressions": [{"jp": "便利な表現(JText)", "ko": "韓国語訳"}]}`;
+
+const clampScore = <T extends { score: number }>(x: T): T => ({ ...x, score: Math.round(Math.max(0, Math.min(100, x.score || 0))) });
+
+// ───────── public API ─────────
+
 export async function grade(task: GradeTask, answer: string): Promise<Grade> {
-  const { data } = await call(
-    GradeSchema,
-    TEACHER,
-    [{ role: 'user', content: `${describeTask(task)}\n\n【学習者の答え】${answer}` }],
-    'medium',
-  );
-  return { ...data, score: Math.round(Math.max(0, Math.min(100, data.score))) };
+  const user = `${describeTask(task)}
+
+【学習者の答え】${answer}`;
+  if (inClaude) return clampScore(await sampleJson(LooseGrade, `${TEACHER}
+
+${user}
+
+${GRADE_FORMAT}`, 'default', true));
+  const { data } = await call(GradeSchema, TEACHER, [{ role: 'user', content: user }], 'medium');
+  return clampScore(data);
 }
 
 // ───────── roleplay ─────────
@@ -143,6 +228,8 @@ export interface ChatTurn {
   text: string; // learner text, or the character reply (JText)
   /** raw assistant content blocks, sent back unchanged to keep the conversation valid */
   raw?: Anthropic.Beta.BetaContentBlock[];
+  /** the assistant's JSON reply as sent back on claude.ai */
+  meta?: string;
 }
 
 function roleplaySystem(s: RoleplaySetup) {
@@ -157,35 +244,61 @@ function roleplaySystem(s: RoleplaySetup) {
 - ${JTEXT_RULE}`;
 }
 
-export async function roleplayTurn(setup: RoleplaySetup, history: ChatTurn[]): Promise<{ turn: Turn; raw: Anthropic.Beta.BetaContentBlock[] }> {
-  // The opening line is given as context in the first user message; the API needs a user turn first.
+export async function roleplayTurn(
+  setup: RoleplaySetup,
+  history: ChatTurn[],
+): Promise<{ turn: Turn; raw: Anthropic.Beta.BetaContentBlock[]; meta: string }> {
+  // history[0] is the character's opening line; the conversation sent to Claude starts with a user turn.
+  if (inClaude) {
+    const turns: { role: 'user' | 'assistant'; content: string }[] = [];
+    history.forEach((h, i) => {
+      if (h.role === 'user') {
+        const head = i === 1 ? `${roleplaySystem(setup)}
+${TURN_FORMAT}
+
+(あなたの最初のセリフ: ${setup.opening})
+
+学習者: ` : '';
+        turns.push({ role: 'user', content: head + h.text });
+      } else if (i > 0) {
+        turns.push({ role: 'assistant', content: h.meta ?? JSON.stringify({ reply: h.text }) });
+      }
+    });
+    const turn = await sampleJson(LooseTurn, turns, 'quick', false);
+    return { turn, raw: [], meta: JSON.stringify(turn) };
+  }
   const messages: Anthropic.Beta.BetaMessageParam[] = [];
   history.forEach((h, i) => {
     if (h.role === 'user') {
-      const prefix = i === 1 ? `(あなたの最初のセリフ: ${setup.opening})\n\n` : '';
+      const prefix = i === 1 ? `(あなたの最初のセリフ: ${setup.opening})
+
+` : '';
       messages.push({ role: 'user', content: prefix + h.text });
     } else if (i > 0) {
       messages.push({ role: 'assistant', content: h.raw ?? h.text });
     }
   });
   const { data, content } = await call(TurnSchema, roleplaySystem(setup), messages, 'low');
-  return { turn: data, raw: content };
+  return { turn: data, raw: content, meta: JSON.stringify(data) };
 }
 
 export async function evaluateRoleplay(setup: RoleplaySetup, history: ChatTurn[]): Promise<RoleplayEval> {
   const transcript = history
     .map((h) => (h.role === 'user' ? `学習者: ${h.text}` : `相手: ${h.text.replace(/\{[^}]*\}/g, '')}`))
     .join('\n');
-  const { data } = await call(
-    RoleplayEvalSchema,
-    TEACHER,
-    [
-      {
-        role: 'user',
-        content: `次のロールプレイ会話を評価してください。\n【場面】${setup.setting_ko}\n【相手】${setup.character}\n【学習者の目標】${setup.goal_ko}\n\n${transcript}\n\n学習者の日本語(文法・語彙・敬語の使い分け・自然さ)と目標達成度を評価する。`,
-      },
-    ],
-    'medium',
-  );
-  return { ...data, score: Math.round(Math.max(0, Math.min(100, data.score))) };
+  const prompt = `次のロールプレイ会話を評価してください。
+【場面】${setup.setting_ko}
+【相手】${setup.character}
+【学習者の目標】${setup.goal_ko}
+
+${transcript}
+
+学習者の日本語(文法・語彙・敬語の使い分け・自然さ)と目標達成度を評価する。`;
+  if (inClaude) return clampScore(await sampleJson(LooseEval, `${TEACHER}
+
+${prompt}
+
+${EVAL_FORMAT}`, 'default', false));
+  const { data } = await call(RoleplayEvalSchema, TEACHER, [{ role: 'user', content: prompt }], 'medium');
+  return clampScore(data);
 }

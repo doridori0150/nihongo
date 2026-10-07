@@ -1,6 +1,11 @@
 # にほんご Daily
 
-**사이트: https://doridori0150.github.io/nihongo/**  (폰에서 열고 "홈 화면에 추가"하면 앱처럼 쓸 수 있어요)
+| 버전 | 주소 | AI 회화 | 학습 기록 |
+|---|---|---|---|
+| 웹 (GitHub Pages) | https://doridori0150.github.io/nihongo/ | 각자 Anthropic API 키 | 브라우저 + (선택) GitHub Gist 동기화, 오프라인·홈 화면 추가 가능 |
+| claude.ai (Artifact) | https://claude.ai/artifact/JgmYPRXE1kdSmiCqGs15do | **내 Claude 계정 사용량** (API 키 불필요) | 내 Claude 계정에 자동 저장 |
+
+코드는 하나이고, claude.ai 안에서 열리면 자동으로 계정 연동 모드로 바뀝니다. claude.ai 버전은 비공개로 시작하니 다른 사람이 쓰려면 Artifact의 공유 메뉴에서 공유해야 하고, 기록을 계정에 저장하려면 그 사람에게 Contributor 이상 권한이 필요합니다(그 외에는 브라우저에만 저장).
 
 JLPT N2 이상 학습자를 위한 매일 조금씩 하는 일본어 학습 웹앱.
 여행·일상 회화 + 드라마/애니/만화/소설풍 예문으로 매일 단어·문법·문장을 익히고, 틀린 문제는 간격 복습으로 다시 풉니다.
@@ -41,6 +46,15 @@ npm run build        # 콘텐츠 빌드 + 타입 체크 + 프로덕션 빌드
 ```
 
 > 경로에 한글이 있는 폴더(예: `C:\회사AI`)에서는 Vite 8의 코드 분할 빌드가 메시지 없이 종료될 수 있습니다. `npm run dev`와 GitHub Actions 배포는 정상이며, 로컬에서 빌드를 확인하려면 `npx vite build --outDir <영문 경로>`를 쓰세요.
+
+### claude.ai 버전 다시 올리기
+
+```bash
+npx vite build --outDir <영문 경로>/nd-artifact --emptyOutDir
+node scripts/artifact-page.mjs <영문 경로>/nd-artifact
+```
+
+출력된 `artifact.html`과 `assets/`·`data/` 파일들을 Claude Code의 Artifact 도구로 같은 URL에 게시합니다 (capabilities: `sample`, `db`, `user`).
 
 ## 콘텐츠 추가·수정
 

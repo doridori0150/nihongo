@@ -1,6 +1,9 @@
 import { useRef, useState } from 'react';
 import { Switch } from '../components/common';
+import { askConfirm, notify } from '../components/confirm';
 import { getApiKey, MODEL, setApiKey } from '../lib/aiKey';
+import { inClaude } from '../lib/runtime';
+import { CLAUDE_APP_URL } from '../lib/links';
 import type { Content } from '../lib/content';
 import { canSpeak, speak } from '../lib/speech';
 import { getToken, setToken, syncNow, useSyncStatus } from '../lib/sync';
@@ -55,9 +58,9 @@ export function Settings({ content }: { content: Content }) {
       if (!data.items || !data.days) throw new Error('형식이 올바르지 않아요');
       replaceFromSync(mergeProgress(getProgress(), data));
       update((x) => x); // persist + trigger sync
-      alert('가져오기 완료! 기존 기록과 합쳤어요.');
+      void notify('가져오기 완료!', '기존 기록과 합쳤어요.');
     } catch (e) {
-      alert(`가져오기 실패: ${(e as Error).message}`);
+      void notify('가져오기 실패', (e as Error).message);
     }
   };
 
@@ -129,6 +132,7 @@ export function Settings({ content }: { content: Content }) {
             <div className="hint">기기에 일본어 음성이 없으면 소리가 안 나거나 어색할 수 있어요.</div>
           </div>
         )}
+        {!inClaude && (
         <div className="field" style={{ marginBottom: 0 }}>
           <label>화면 테마 (이 기기)</label>
           <div className="seg" style={{ margin: 0 }}>
@@ -153,8 +157,26 @@ export function Settings({ content }: { content: Content }) {
             ))}
           </div>
         </div>
+        )}
       </div>
 
+      {inClaude ? (
+        <>
+          <div className="h2">☁️ Claude 계정 연동</div>
+          <div className="card">
+            <div style={{ fontWeight: 800 }}>
+              {sync.state === 'error' ? '⚠️ ' + sync.message : '✓ 학습 기록이 내 Claude 계정에 자동 저장돼요'}
+            </div>
+            <div className="small muted" style={{ marginTop: 6, lineHeight: 1.7 }}>
+              claude.ai에 로그인한 PC·폰 어디서 열어도 이어서 할 수 있어요. AI 회화는 내 Claude 사용량으로 동작하고, API 키는 필요 없어요.
+            </div>
+            <button className="btn small blue" style={{ marginTop: 12 }} onClick={() => syncNow()} disabled={sync.state === 'syncing'}>
+              {sync.state === 'syncing' ? '저장 중…' : '지금 저장'}
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
       <div className="h2">☁️ 기기 간 동기화 (GitHub Gist)</div>
       <div className="card">
         {token ? (
@@ -178,10 +200,11 @@ export function Settings({ content }: { content: Content }) {
               className="btn ghost plain small"
               style={{ marginTop: 12 }}
               onClick={() => {
-                if (confirm('이 기기에서 동기화를 해제할까요? (Gist와 학습 기록은 그대로 남아요)')) {
+                void askConfirm({ title: '동기화를 해제할까요?', body: '이 기기에서만 해제돼요. Gist와 학습 기록은 그대로 남아요.', ok: '해제' }).then((ok) => {
+                  if (!ok) return;
                   setToken(null);
                   force((n) => n + 1);
-                }
+                });
               }}
             >
               연결 해제
@@ -256,6 +279,12 @@ export function Settings({ content }: { content: Content }) {
                 console.anthropic.com
               </a>
               에서 키를 만들고 크레딧을 충전하세요. 채점 1회 대략 10원 안팎.
+              <br />
+              API 키 없이 쓰려면{' '}
+              <a href={CLAUDE_APP_URL} target="_blank" rel="noreferrer">
+                claude.ai 버전
+              </a>
+              을 여세요. 내 Claude 계정 사용량으로 채점하고, 기록도 계정에 저장돼요.
             </div>
             <div className="row" style={{ marginTop: 10 }}>
               <input
@@ -284,13 +313,17 @@ export function Settings({ content }: { content: Content }) {
           </>
         )}
       </div>
+        </>
+      )}
 
       <div className="h2">데이터</div>
       <div className="card">
         <div className="row" style={{ flexWrap: 'wrap' }}>
+          {!inClaude && (
           <button className="btn small ghost" onClick={exportData}>
             ⬇️ 백업 내보내기
           </button>
+          )}
           <button className="btn small ghost" onClick={() => fileRef.current?.click()}>
             ⬆️ 백업 가져오기
           </button>
@@ -306,7 +339,12 @@ export function Settings({ content }: { content: Content }) {
           className="btn small red"
           style={{ marginTop: 14 }}
           onClick={() => {
-            if (confirm('모든 학습 기록을 지울까요? 동기화 중이면 Gist에도 반영될 수 있어요.') && confirm('정말요? 되돌릴 수 없어요.')) resetProgress();
+            void askConfirm({
+              title: '모든 학습 기록을 지울까요?',
+              body: '되돌릴 수 없어요. 동기화 중이면 다른 기기에도 반영될 수 있어요.',
+              ok: '전부 지우기',
+              danger: true,
+            }).then((ok) => ok && resetProgress());
           }}
         >
           학습 기록 초기화

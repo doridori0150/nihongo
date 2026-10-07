@@ -1,18 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
 import { Ring } from '../components/common';
+import { askConfirm } from '../components/confirm';
 import { JP, Speak } from '../components/JP';
 import {
+  type AiMode,
   type ChatTurn,
   type Grade,
   type GradeTask,
   type RoleplayEval,
   type Turn,
+  aiMode,
   evaluateRoleplay,
   grade,
   roleplayTurn,
 } from '../lib/ai';
 import { getApiKey } from '../lib/aiKey';
 import { takeAiRequest } from '../lib/nav';
+import { inClaude } from '../lib/runtime';
+import { CLAUDE_APP_URL } from '../lib/links';
 import { type Content, type Example, type Opinion, type Roleplay, type Situation, isGrammar, isPhrase, isWord } from '../lib/content';
 import { plain } from '../lib/jtext';
 import { today } from '../lib/date';
@@ -78,10 +83,35 @@ function composeTask(c: Content): ComposeTask | null {
 export function AiPractice({ content, go }: { content: Content; go: (r: string) => void }) {
   const [request] = useState(takeAiRequest);
   const [mode, setMode] = useState<Mode | null>(request?.mode ?? null);
-  const hasKey = !!getApiKey();
+  const [ai, setAi] = useState<AiMode | null>(inClaude ? null : getApiKey() ? 'apikey' : 'none');
   const p = useProgress();
+  useEffect(() => {
+    if (inClaude) void aiMode().then(setAi);
+  }, []);
 
-  if (!hasKey) {
+  if (ai === null) {
+    return (
+      <div className="page">
+        <div className="empty">Claude 연결 확인 중…</div>
+      </div>
+    );
+  }
+
+  if (ai === 'none' && inClaude) {
+    return (
+      <div className="page">
+        <div className="h1">회화 연습</div>
+        <div className="card">
+          <div style={{ fontWeight: 800, fontSize: 18, margin: '6px 0' }}>이 화면에서는 Claude를 쓸 수 없어요</div>
+          <div className="small muted" style={{ lineHeight: 1.7 }}>
+            claude.ai에 로그인한 상태로 이 페이지를 열면, 내 Claude 계정으로 채점과 롤플레이를 할 수 있어요.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (ai === 'none') {
     return (
       <div className="page">
         <div className="h1">회화 연습</div>
@@ -94,8 +124,11 @@ export function AiPractice({ content, go }: { content: Content; go: (r: string) 
             채점 1회당 대략 10원 안팎의 API 요금이 들어요.
           </div>
           <button className="btn block blue" style={{ marginTop: 14 }} onClick={() => go('settings')}>
-            설정으로 가기
+            설정에서 API 키 넣기
           </button>
+          <a className="btn block ghost" style={{ marginTop: 8, textDecoration: 'none' }} href={CLAUDE_APP_URL} target="_blank" rel="noreferrer">
+            API 키 없이 내 Claude 계정으로 쓰기 (claude.ai 버전)
+          </a>
         </div>
       </div>
     );
@@ -112,6 +145,7 @@ export function AiPractice({ content, go }: { content: Content; go: (r: string) 
       <div className="h1">회화 연습</div>
       <div className="muted small" style={{ marginBottom: 14 }}>
         일본어로 답하면 Claude가 문법·자연스러움·경어를 채점하고 고쳐 줘요.
+        {ai === 'claude' ? ' 내 Claude 계정 사용량으로 동작해요.' : ''}
         {p.days[today()]?.done.ai && ' · 오늘 AI 회화 ✔️'}
       </div>
       <div className="mode-grid">
@@ -492,11 +526,11 @@ function RoleplayChat({ rp, back }: { rp: Roleplay; back: () => void }) {
     setBusy(true);
     setError('');
     try {
-      const { turn, raw } = await roleplayTurn(rp, history);
+      const { turn, raw, meta } = await roleplayTurn(rp, history);
       setTurns((ts) => {
         const copy = [...ts];
         copy[copy.length - 1] = { ...copy[copy.length - 1], correction: turn.correction };
-        return [...copy, { role: 'assistant', text: turn.reply, ko: turn.reply_ko, raw }];
+        return [...copy, { role: 'assistant', text: turn.reply, ko: turn.reply_ko, raw, meta }];
       });
       if (turn.goal_done) setGoal(true);
     } catch (e) {
@@ -548,7 +582,7 @@ function RoleplayChat({ rp, back }: { rp: Roleplay; back: () => void }) {
   return (
     <div className={`page ${p.settings.furigana ? '' : 'furi-off'}`} style={{ paddingBottom: 16 }}>
       <div className="row">
-        <button className="icon-btn" onClick={() => (result || userTurns === 0 || confirm('대화를 끝낼까요?')) && back()} aria-label="뒤로">
+        <button className="icon-btn" onClick={async () => (result || userTurns === 0 || (await askConfirm({ title: '대화를 끝낼까요?', body: '평가를 받지 않으면 이 대화는 기록에 남지 않아요.', ok: '끝내기', cancel: '계속 대화' }))) && back()} aria-label="뒤로">
           ←
         </button>
         <div style={{ fontWeight: 900, fontSize: 18 }}>{rp.title}</div>

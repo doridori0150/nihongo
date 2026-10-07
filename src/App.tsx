@@ -1,5 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { Lesson } from './components/Lesson';
+import { ConfirmHost } from './components/confirm';
 import { type Content, loadContent } from './lib/content';
 import type { Session } from './lib/sessions';
 import { streak, useProgress } from './lib/store';
@@ -52,7 +53,8 @@ export default function App() {
   }, []);
 
   const go = useCallback((r: string) => {
-    location.hash = `/${r}`;
+    // bare #token form: the only hash an Artifact link keeps
+    location.hash = r;
     window.scrollTo(0, 0);
   }, []);
 
@@ -62,7 +64,11 @@ export default function App() {
       setTimeout(() => setToast(''), 2200);
       return;
     }
-    history.pushState({ lesson: true }, '');
+    try {
+      history.pushState({ lesson: true }, '');
+    } catch {
+      /* history may be locked down in embedded viewers; the close button still works */
+    }
     setSession(s);
   }, []);
 
@@ -118,6 +124,7 @@ export default function App() {
         <Lesson key={session.title + session.exercises.length} title={session.title} exercises={session.exercises} content={content} onFinish={session.onFinish} onExit={closeLesson} />
       )}
       {toast && <div className="toast">{toast}</div>}
+      <ConfirmHost />
     </div>
   );
 }
