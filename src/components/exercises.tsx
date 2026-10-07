@@ -73,7 +73,6 @@ export function ChoiceView({ ex, value, checked, onChange }: Props<Extract<Grade
       {p.ko && <div className="prompt-ko">“{p.ko}”</div>}
       {p.jp && (
         <div className="bubble-row">
-          <div className="mascot">🦊</div>
           <div className="speech">
             <JP text={p.jp} />
           </div>
@@ -173,8 +172,8 @@ export function AssembleView({ ex, value, checked, onChange }: Props<Extract<Gra
     <>
       <div className="ex-title">{ex.title}</div>
       <div className="bubble-row">
-        <div className="mascot">🦊</div>
         <div className="speech" style={{ fontSize: 17 }}>
+          <div className="speech-label">이 뜻이 되도록 일본어 블록을 순서대로</div>
           {ex.ko}
         </div>
       </div>

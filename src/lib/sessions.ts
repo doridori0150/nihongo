@@ -3,7 +3,7 @@ import { type Content, type Grammar, type Item, type Phrase, type Word } from '.
 import { pickNew } from './daily';
 import { today } from './date';
 import { type Exercise, buildGrammarLesson, buildPhraseLesson, buildReview, buildWordLesson, shuffle } from './quiz';
-import { addXp, dueItems, getProgress, markDone, recordLearned, recordReviewed, STAGE_GRADUATED, type TaskKey } from './store';
+import { addAccuracy, addXp, dueItems, getProgress, markDone, recordLearned, recordReviewed, STAGE_GRADUATED, type TaskKey } from './store';
 
 export interface Session {
   title: string;
@@ -14,6 +14,7 @@ export interface Session {
 export const REVIEW_BATCH = 20;
 
 function xpFor(r: LessonResult) {
+  addAccuracy(r.correct, r.wrong);
   return r.correct + 5;
 }
 
@@ -91,6 +92,23 @@ export function practiceSession(c: Content, count = 15): Session | null {
   return {
     title: '오답 연습',
     exercises: buildReview(items, c),
+    onFinish: (r) => {
+      const xp = Math.ceil(xpFor(r) / 2);
+      addXp(xp);
+      return xp;
+    },
+  };
+}
+
+/** Re-practice today's items after the lesson is done, without touching review schedules. */
+export function todayPracticeSession(c: Content, kind: 'words' | 'grammar' | 'phrases'): Session | null {
+  const plan = getProgress().days[today()];
+  const items = resolve<Item>(c, plan?.[kind] ?? []);
+  if (!items.length) return null;
+  const exercises = kind === 'words' ? [...buildReview(items, c), ...buildReview(items, c)] : buildReview(items, c);
+  return {
+    title: '다시 연습',
+    exercises: shuffle(exercises),
     onFinish: (r) => {
       const xp = Math.ceil(xpFor(r) / 2);
       addXp(xp);

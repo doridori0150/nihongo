@@ -12,6 +12,7 @@ import {
   roleplayTurn,
 } from '../lib/ai';
 import { getApiKey } from '../lib/aiKey';
+import { takeAiRequest } from '../lib/nav';
 import { type Content, type Example, type Opinion, type Roleplay, type Situation, isGrammar, isPhrase, isWord } from '../lib/content';
 import { plain } from '../lib/jtext';
 import { today } from '../lib/date';
@@ -75,14 +76,15 @@ function composeTask(c: Content): ComposeTask | null {
 }
 
 export function AiPractice({ content, go }: { content: Content; go: (r: string) => void }) {
-  const [mode, setMode] = useState<Mode | null>(null);
+  const [request] = useState(takeAiRequest);
+  const [mode, setMode] = useState<Mode | null>(request?.mode ?? null);
   const hasKey = !!getApiKey();
   const p = useProgress();
 
   if (!hasKey) {
     return (
       <div className="page">
-        <div className="h1">AI 회화</div>
+        <div className="h1">회화 연습</div>
         <div className="card">
           <div style={{ fontSize: 40 }}>🔑</div>
           <div style={{ fontWeight: 900, fontSize: 18, margin: '6px 0' }}>Anthropic API 키가 필요해요</div>
@@ -100,11 +102,14 @@ export function AiPractice({ content, go }: { content: Content; go: (r: string) 
   }
 
   if (mode === 'roleplay') return <RoleplayPicker content={content} back={() => setMode(null)} />;
-  if (mode) return <QA key={mode} mode={mode} content={content} back={() => setMode(null)} />;
+  if (mode) {
+    const initialId = request && 'id' in request && request.mode === mode ? request.id : undefined;
+    return <QA key={mode} mode={mode} content={content} initialId={initialId} back={() => setMode(null)} />;
+  }
 
   return (
     <div className="page">
-      <div className="h1">AI 회화</div>
+      <div className="h1">회화 연습</div>
       <div className="muted small" style={{ marginBottom: 14 }}>
         일본어로 답하면 Claude가 문법·자연스러움·경어를 채점하고 고쳐 줘요.
         {p.days[today()]?.done.ai && ' · 오늘 AI 회화 ✔️'}
@@ -149,9 +154,19 @@ function promptSummary(t: QATask): string {
   return t.item.ko;
 }
 
-function QA({ mode, content, back }: { mode: Exclude<Mode, 'roleplay'>; content: Content; back: () => void }) {
+function QA({ mode, content, back, initialId }: { mode: Exclude<Mode, 'roleplay'>; content: Content; back: () => void; initialId?: string }) {
   const p = useProgress();
-  const [task, setTask] = useState<QATask | null>(() => newTask(mode, content));
+  const [task, setTask] = useState<QATask | null>(() => {
+    if (initialId && mode === 'situation') {
+      const item = content.situations.find((x) => x.id === initialId);
+      if (item) return { mode, item };
+    }
+    if (initialId && mode === 'opinion') {
+      const item = content.opinions.find((x) => x.id === initialId);
+      if (item) return { mode, item };
+    }
+    return newTask(mode, content);
+  });
   const [answer, setAnswer] = useState('');
   const [showKo, setShowKo] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -215,11 +230,10 @@ function QA({ mode, content, back }: { mode: Exclude<Mode, 'roleplay'>; content:
             {task.mode === 'situation' && (
               <>
                 <div className="small muted">🎬 {task.item.scene}</div>
-                <div className="bubble-row" style={{ marginTop: 12, marginBottom: 8 }}>
-                  <div style={{ textAlign: 'center', flex: 'none' }}>
-                    <div className="mascot">🧑</div>
-                    <div className="small muted">{task.item.partner}</div>
-                  </div>
+                <span className="talk-who" style={{ display: 'inline-block', marginTop: 12 }}>
+                  {task.item.partner}
+                </span>
+                <div className="bubble-row" style={{ marginTop: 8, marginBottom: 8 }}>
                   <div className="speech">
                     <JP text={task.item.line} />
                     {showKo && <div className="small muted">{task.item.line_ko}</div>}
@@ -239,7 +253,6 @@ function QA({ mode, content, back }: { mode: Exclude<Mode, 'roleplay'>; content:
             {task.mode === 'opinion' && (
               <>
                 <div className="bubble-row" style={{ marginBottom: 8 }}>
-                  <div className="mascot">🦊</div>
                   <div className="speech">
                     <JP text={task.item.question} />
                     {showKo && <div className="small muted">{task.item.question_ko}</div>}
@@ -336,10 +349,10 @@ function QA({ mode, content, back }: { mode: Exclude<Mode, 'roleplay'>; content:
 }
 
 const VERDICT: Record<Grade['verdict'], string> = {
-  perfect: '완벽해요! 🎉',
-  good: '잘했어요! 👍',
-  okay: '통하긴 해요 🙂',
-  needs_work: '조금 더 다듬어 봐요 💪',
+  perfect: '완벽! 일본인이 「え、日本人？」 할 수준 🎉',
+  good: '잘했어요! 뜻은 확실히 통해요 👍',
+  okay: '통하긴 해요. 일본인이 살짝 고개를 갸웃할 수도 🤔',
+  needs_work: '조금 더 다듬어 봐요 💪 다들 이렇게 늘어요',
 };
 const POINT_LABEL: Record<string, string> = {
   grammar: '문법',

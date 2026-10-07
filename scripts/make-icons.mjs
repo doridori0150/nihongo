@@ -5,9 +5,9 @@ import { fileURLToPath } from 'node:url';
 
 const OUT = fileURLToPath(new URL('../public/', import.meta.url));
 
-const GREEN = [88, 204, 2];
+const GREEN = [43, 79, 134];
 const WHITE = [255, 255, 255];
-const RED = [235, 51, 51];
+const RED = [224, 83, 58];
 
 function crc32(buf) {
   let c,

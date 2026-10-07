@@ -57,6 +57,8 @@ export interface Progress {
   days: Record<string, DayPlan>;
   /** xp[date][deviceId] — per device so merging never double counts or loses points */
   xp: Record<string, Record<string, number>>;
+  /** acc[date][deviceId] = [correct, wrong] answers, merged like xp */
+  acc: Record<string, Record<string, [number, number]>>;
   settings: Settings;
   ai: AiLogEntry[];
 }
@@ -80,6 +82,7 @@ function fresh(): Progress {
     items: {},
     days: {},
     xp: {},
+    acc: {},
     settings: { ...DEFAULT_SETTINGS },
     ai: [],
   };
@@ -276,6 +279,31 @@ export function addXp(n: number) {
   });
 }
 
+/** Record answer counts for the accuracy signal. */
+export function addAccuracy(correct: number, wrong: number) {
+  const d = today();
+  update((p) => {
+    const day = { ...(p.acc?.[d] ?? {}) };
+    const [c, w] = day[deviceId] ?? [0, 0];
+    day[deviceId] = [c + correct, w + wrong];
+    return { ...p, acc: { ...p.acc, [d]: day } };
+  });
+}
+
+/** Share of correct answers over the last `days` days, or null with too few answers. */
+export function recentAccuracy(p: Progress, days = 7, date = today()): { pct: number; total: number } | null {
+  let c = 0;
+  let w = 0;
+  for (let i = 0; i < days; i++) {
+    for (const [dc, dw] of Object.values(p.acc?.[addDays(date, -i)] ?? {})) {
+      c += dc;
+      w += dw;
+    }
+  }
+  const total = c + w;
+  return total >= 10 ? { pct: Math.round((c / total) * 100), total } : null;
+}
+
 export function xpOn(p: Progress, date: string): number {
   return Object.values(p.xp[date] ?? {}).reduce((a, b) => a + b, 0);
 }
@@ -341,6 +369,16 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     for (const [dev, n] of Object.entries(devs)) merged[dev] = Math.max(merged[dev] ?? 0, n);
     xp[d] = merged;
   }
+  const acc: Progress['acc'] = { ...(a.acc ?? {}) };
+  for (const [d, devs] of Object.entries(b.acc ?? {})) {
+    const merged = { ...(acc[d] ?? {}) };
+    for (const [dev, [c, w]] of Object.entries(devs)) {
+      const mine = merged[dev];
+      // counts only grow on a device during a day, so the larger total is the newer one
+      if (!mine || c + w > mine[0] + mine[1]) merged[dev] = [c, w];
+    }
+    acc[d] = merged;
+  }
   const seenAi = new Set<string>();
   const ai = [...a.ai, ...b.ai]
     .filter((e) => (seenAi.has(e.id) ? false : (seenAi.add(e.id), true)))
@@ -352,6 +390,7 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     items,
     days,
     xp,
+    acc,
     settings: (b.settings?.u ?? 0) > (a.settings?.u ?? 0) ? { ...DEFAULT_SETTINGS, ...b.settings } : a.settings,
     ai,
   };

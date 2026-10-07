@@ -4,6 +4,7 @@ import { itemMeaning, itemTitle, isWord } from '../lib/content';
 import { kana } from '../lib/jtext';
 import { type Exercise, type Graded, answerText, shuffle } from '../lib/quiz';
 import { sfx, speak } from '../lib/speech';
+import { OOPS, PRAISE, comboText, completeQuip, pickOne } from '../lib/fun';
 import { type ItemResult, useProgress } from '../lib/store';
 import { type Answer, AssembleView, ChoiceView, ClozeView, isCorrect } from './exercises';
 import { ItemCard } from './ItemCard';
@@ -24,7 +25,6 @@ interface Props {
   onExit: () => void;
 }
 
-const PRAISE = ['훌륭해요!', '정답이에요!', '완벽해요!', 'すごい！', 'その通り！', '좋아요!'];
 
 function retryCopy(ex: Graded): Graded {
   if (ex.kind === 'assemble') return { ...ex, tiles: shuffle(ex.tiles) };
@@ -43,7 +43,7 @@ export function Lesson({ title, exercises, content, onFinish, onExit }: Props) {
   const [queue, setQueue] = useState<Exercise[]>(exercises);
   const [idx, setIdx] = useState(0);
   const [value, setValue] = useState<Answer>(null);
-  const [checked, setChecked] = useState<null | { ok: boolean; praise: string }>(null);
+  const [checked, setChecked] = useState<null | { ok: boolean; line: string }>(null);
   const [done, setDone] = useState(0);
   const [combo, setCombo] = useState(0);
   const failed = useRef(new Set<string>());
@@ -96,7 +96,7 @@ export function Lesson({ title, exercises, content, onFinish, onExit }: Props) {
       setQueue((q) => [...q, retryCopy(ex)]);
     }
     if (progress.settings.sound && ex.kind !== 'choice') setTimeout(() => speak(kana(ex.jp)), 350);
-    setChecked({ ok, praise: PRAISE[Math.floor(Math.random() * PRAISE.length)] });
+    setChecked({ ok, line: pickOne(ok ? PRAISE : OOPS) });
   }, [ex, value, checked, progress.settings.sound]);
 
   const advanceIntro = useCallback(() => {
@@ -137,7 +137,7 @@ export function Lesson({ title, exercises, content, onFinish, onExit }: Props) {
         <div className="bar">
           <div style={{ width: `${pct}%` }} />
         </div>
-        {combo >= 3 && <span className="combo">🔥 {combo}</span>}
+        {combo >= 3 && <span className="combo">{comboText(combo)}</span>}
       </div>
       <div className="lesson-body" key={idx}>
         {ex.kind === 'intro' && (
@@ -164,7 +164,7 @@ export function Lesson({ title, exercises, content, onFinish, onExit }: Props) {
       ) : checked ? (
         <div className={`lesson-foot feedback ${checked.ok ? 'ok' : 'bad'}`}>
           <div className="feedback-msg">
-            <div className="head">{checked.ok ? `✅ ${checked.praise}` : '❌ 아쉬워요'}</div>
+            <div className="head">{checked.ok ? `✅ ${checked.line}` : `❌ ${checked.line}`}</div>
             {!checked.ok && (
               <div className="answer">
                 정답: <span className="jp">{answerText(ex)}</span>
@@ -177,7 +177,7 @@ export function Lesson({ title, exercises, content, onFinish, onExit }: Props) {
             )}
           </div>
           <div className="lesson-foot-inner">
-            <button className={`btn block ${checked.ok ? '' : 'red'}`} onClick={next} autoFocus>
+            <button className={`btn block ${checked.ok ? 'ok' : 'red'}`} onClick={next} autoFocus>
               계속
             </button>
           </div>
@@ -210,12 +210,14 @@ function Complete({
 }) {
   const attempts = result.correct + result.wrong;
   const acc = attempts ? Math.round((result.correct / attempts) * 100) : 100;
+  const { emoji, quip } = completeQuip(acc);
   return (
     <div className="lesson">
       <div className="lesson-body">
         <div className="complete">
-          <div className="big">{acc === 100 ? '🏆' : acc >= 80 ? '🎉' : '💪'}</div>
+          <div className="big">{emoji}</div>
           <div className="title">{title} 완료!</div>
+          <div className="quip">{quip}</div>
           <div className="stat-cards">
             <div className="stat-card" style={{ ['--c' as string]: 'var(--yellow)' }}>
               <div className="k">획득 XP</div>
@@ -228,7 +230,7 @@ function Complete({
           </div>
           {result.misses.length > 0 && (
             <div className="miss-list card">
-              <div style={{ fontWeight: 900, marginBottom: 6 }}>🔁 복습 목록에 추가됨 (1일 후 다시 출제)</div>
+              <div style={{ fontWeight: 800, marginBottom: 6 }}>🔁 복습함 입장 (내일 다시 만나요)</div>
               {result.misses.map((id) => {
                 const it = content.byId.get(id);
                 if (!it) return null;
