@@ -132,7 +132,8 @@ export function StoryPlayer({ ep, content, hasNext, onExit, onNext }: Props) {
           if (on) on.face = s.face ?? on.face;
           else st.cast = [...st.cast, { id: s.say, face: (s.face as Face) ?? 'normal' }].slice(-MAX_ON_STAGE);
         }
-        const name = s.say === 'me' ? playerName() : member ? member.name : (s.who ?? '');
+        // name tags are plain text: drop any 漢字{かな} readings or | chunk marks a script put in `who`
+        const name = s.say === 'me' ? playerName() : member ? member.name : (s.who ?? '').replace(/\{[^}]*\}/g, '').replace(/\|/g, '');
         shown = { key: path(), who: s.say, name, color: member?.color, jp: fill(s.jp), ko: fill(s.ko) };
       }
       setLog((l) => [...l, shown].slice(-120));

@@ -143,6 +143,7 @@ function checkStory(ep, file) {
         str(where, s.ko, `${at} ko`);
         if (k === 'say' && !['me', 'npc', ...CAST_IDS].includes(s.say)) report(where, `${at}: 알 수 없는 화자 ${s.say}`);
         if (k === 'say' && s.say === 'npc') str(where, s.who, `${at} who`);
+        if (k === 'say' && typeof s.who === 'string' && /[{}|]/.test(s.who)) report(where, `${at} who 에 후리가나·청크 표기(이름 칸은 일반 텍스트로 표시됨)`);
       }
       if (k === 'choice') {
         choices++;
