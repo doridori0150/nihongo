@@ -4,7 +4,10 @@ import { itemMeaning, itemTitle, isWord } from '../lib/content';
 import { kana } from '../lib/jtext';
 import { type Exercise, type Graded, answerText, shuffle } from '../lib/quiz';
 import { sfx, speak } from '../lib/speech';
-import { OOPS, PRAISE, comboText, completeQuip, pickOne } from '../lib/fun';
+import { comboText, completeQuip } from '../lib/fun';
+import { type Line, type Member, say } from '../lib/cast';
+import { Avatar, Bubble } from './Avatar';
+import { JP } from './JP';
 import { type ItemResult, useProgress } from '../lib/store';
 import { type Answer, AssembleView, ChoiceView, ClozeView, isCorrect } from './exercises';
 import { ItemCard } from './ItemCard';
@@ -44,7 +47,7 @@ export function Lesson({ title, exercises, content, onFinish, onExit }: Props) {
   const [queue, setQueue] = useState<Exercise[]>(exercises);
   const [idx, setIdx] = useState(0);
   const [value, setValue] = useState<Answer>(null);
-  const [checked, setChecked] = useState<null | { ok: boolean; line: string }>(null);
+  const [checked, setChecked] = useState<null | { ok: boolean; member: Member; line: Line }>(null);
   const [done, setDone] = useState(0);
   const [combo, setCombo] = useState(0);
   const failed = useRef(new Set<string>());
@@ -97,7 +100,7 @@ export function Lesson({ title, exercises, content, onFinish, onExit }: Props) {
       setQueue((q) => [...q, retryCopy(ex)]);
     }
     if (progress.settings.sound && ex.kind !== 'choice') setTimeout(() => speak(kana(ex.jp)), 350);
-    setChecked({ ok, line: pickOne(ok ? PRAISE : OOPS) });
+    setChecked({ ok, ...say(ok ? 'correct' : 'wrong') });
   }, [ex, value, checked, progress.settings.sound]);
 
   const advanceIntro = useCallback(() => {
@@ -168,7 +171,16 @@ export function Lesson({ title, exercises, content, onFinish, onExit }: Props) {
       ) : checked ? (
         <div className={`lesson-foot feedback ${checked.ok ? 'ok' : 'bad'}`}>
           <div className="feedback-msg">
-            <div className="head">{checked.ok ? `✅ ${checked.line}` : `❌ ${checked.line}`}</div>
+            <div className="head">
+              <Avatar id={checked.member.id} size={40} />
+              <div style={{ minWidth: 0 }}>
+                <div className="fb-line">
+                  {checked.ok ? '✅ ' : '❌ '}
+                  <JP text={checked.line.jp} />
+                </div>
+                <div className="fb-ko">{checked.line.ko}</div>
+              </div>
+            </div>
             {!checked.ok && (
               <div className="answer">
                 정답: <span className="jp">{answerText(ex)}</span>
@@ -215,6 +227,7 @@ function Complete({
   const attempts = result.correct + result.wrong;
   const acc = attempts ? Math.round((result.correct / attempts) * 100) : 100;
   const { emoji, quip } = completeQuip(acc);
+  const [cheer] = useState(() => say(acc >= 70 ? 'correct' : 'wrong'));
   return (
     <div className="lesson">
       <div className="lesson-body">
@@ -222,6 +235,9 @@ function Complete({
           <div className="big">{emoji}</div>
           <div className="title">{title} 완료!</div>
           <div className="quip">{quip}</div>
+          <div style={{ textAlign: 'left', margin: '0 auto 16px', maxWidth: 420 }}>
+            <Bubble member={cheer.member} line={cheer.line} />
+          </div>
           <div className="stat-cards">
             <div className="stat-card" style={{ ['--c' as string]: 'var(--yellow)' }}>
               <div className="k">획득 XP</div>

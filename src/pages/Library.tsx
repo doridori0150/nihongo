@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Sheet, Stages, stageLabel } from '../components/common';
 import { ItemCard } from '../components/ItemCard';
-import { type Content, type Item, isGrammar, isWord, itemMeaning, itemTitle } from '../lib/content';
+import { type Content, type Item, isGrammar, isQuote, isWord, itemMeaning, itemTitle } from '../lib/content';
 import { plain } from '../lib/jtext';
 import { STAGE_GRADUATED, markForReview, useProgress } from '../lib/store';
 
@@ -28,7 +28,9 @@ export function Library({ content }: { content: Content }) {
           ? `${it.word} ${it.reading} ${it.meaning}`
           : isGrammar(it)
             ? `${it.pattern} ${it.meaning}`
-            : `${plain(it.jp)} ${it.ko} ${it.expression}`;
+            : isQuote(it)
+              ? `${plain(it.line)} ${it.ko} ${it.work} ${it.work_ko}`
+              : `${plain(it.jp)} ${it.ko} ${it.expression}`;
         return hay.toLowerCase().includes(query);
       })
       .sort((a, b) => (p.items[b.id]?.u ?? 0) - (p.items[a.id]?.u ?? 0));

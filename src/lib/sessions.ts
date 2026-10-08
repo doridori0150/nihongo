@@ -3,7 +3,7 @@ import { type Content, type Grammar, type Item, type Phrase, type Word } from '.
 import { pickNew } from './daily';
 import { today } from './date';
 import { type Exercise, buildGrammarLesson, buildPhraseLesson, buildReview, buildWordLesson, shuffle } from './quiz';
-import { addAccuracy, addXp, dueItems, getProgress, markDone, recordLearned, recordReviewed, STAGE_GRADUATED, type TaskKey } from './store';
+import { addAccuracy, addXp, dueItems, getProgress, markDone, rateCards, recordLearned, recordReviewed, STAGE_GRADUATED, type TaskKey } from './store';
 
 export interface Session {
   title: string;
@@ -111,6 +111,22 @@ export function todayPracticeSession(c: Content, kind: 'words' | 'grammar' | 'ph
     exercises: shuffle(exercises),
     onFinish: (r) => {
       const xp = Math.ceil(xpFor(r) / 2);
+      addXp(xp);
+      return xp;
+    },
+  };
+}
+
+/** Quiz over flashcard-deck items; results move the cards along their own schedule. */
+export function deckQuizSession(c: Content, ids: string[]): Session | null {
+  const items = resolve<Item>(c, shuffle(ids).slice(0, 20));
+  if (!items.length) return null;
+  return {
+    title: '암기 카드 퀴즈',
+    exercises: buildReview(items, c),
+    onFinish: (r) => {
+      rateCards(r.items.map((x) => ({ id: x.id, rating: x.correct ? 'good' : 'again' })));
+      const xp = xpFor(r);
       addXp(xp);
       return xp;
     },

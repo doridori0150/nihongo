@@ -1,4 +1,4 @@
-import { type Content, type Example, type Grammar, type Item, type Phrase, type Word, isGrammar, isPhrase, isWord } from './content';
+import { type Content, type Example, type Grammar, type Item, type Phrase, type Quote, type Word, isGrammar, isPhrase, isQuote, isWord } from './content';
 import { chunkSources, plain } from './jtext';
 
 export interface Prompt {
@@ -243,6 +243,16 @@ function phraseCloze(ph: Phrase): Graded {
   return clozeOf(ph.id, { jp: ph.jp, ko: ph.ko, src: ph.src, scene: ph.scene }, ph.cloze.target, ph.cloze.distractors);
 }
 
+function quoteMeaning(q: Quote, pool: Quote[]): Graded {
+  const wrong = distinct(
+    pool.filter((x) => x.id !== q.id && x.medium === q.medium).map((x) => x.ko),
+    pool.map((x) => x.ko),
+    3,
+    [q.ko],
+  );
+  return { kind: 'choice', itemId: q.id, title: '이 명대사의 뜻은?', prompt: { jp: q.line }, ...withAnswer(q.ko, wrong, false) };
+}
+
 // ───────── sessions ─────────
 
 /** New-word lesson: introduce 3–4 words, drill them, repeat; finish with sentence building. */
@@ -302,6 +312,14 @@ export function reviewExercise(it: Item, c: Content): Graded {
   }
   if (isPhrase(it)) {
     return sample([() => phraseCloze(it), () => phraseMeaning(it, c.phrases), () => assemble(it.id, it, allExampleSources(c))])();
+  }
+  if (isQuote(it)) {
+    const asLine = { jp: it.line, ko: it.ko };
+    return sample([
+      () => quoteMeaning(it, c.quotes),
+      () => (it.line.includes('|') ? assemble(it.id, asLine, allExampleSources(c)) : quoteMeaning(it, c.quotes)),
+      () => assemble(it.id, sample(it.examples), allExampleSources(c)),
+    ])();
   }
   throw new Error('unknown item');
 }

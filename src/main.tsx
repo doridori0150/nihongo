@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
+import './club.css';
 import App from './App.tsx';
 import { inClaude } from './lib/runtime';
 import { local } from './lib/store';

@@ -1,6 +1,6 @@
 import type { Content, Item, Level } from './content';
 import { diffDays, today } from './date';
-import { type DayPlan, type Progress, STAGE_GRADUATED, dueItems, recentAccuracy } from './store';
+import { type DayPlan, type Progress, dueItems, recentAccuracy } from './store';
 
 export type Light = 'green' | 'yellow' | 'red' | 'off';
 
@@ -23,23 +23,32 @@ export interface LevelProgress {
 
 export function levelProgress(p: Progress, c: Content): LevelProgress[] {
   const all: Item[] = [...c.words, ...c.grammar, ...c.phrases];
-  return (['N2', 'N1'] as const).map((level) => {
-    const pool = all.filter((it) => it.level === level);
-    let learned = 0;
-    let solid = 0;
-    for (const it of pool) {
-      const r = p.items[it.id];
-      if (!r) continue;
-      learned++;
-      if (r.stage < 0 || r.stage >= SOLID_STAGE || r.stage >= STAGE_GRADUATED) solid++;
-    }
-    return { level, total: pool.length, learned, solid };
-  });
+  return (['N3', 'N2', 'N1'] as const)
+    .map((level) => {
+      const pool = all.filter((it) => it.level === level);
+      let learned = 0;
+      let solid = 0;
+      for (const it of pool) {
+        const r = p.items[it.id];
+        const card = p.deck?.[it.id];
+        if (!r && !card?.on) continue;
+        learned++;
+        // learned cleanly, passed the 7-day review, or reached the 7-day step as a flashcard
+        if ((r && (r.stage < 0 || r.stage >= SOLID_STAGE)) || (card?.on && card.stage >= SOLID_STAGE)) solid++;
+      }
+      return { level, total: pool.length, learned, solid };
+    })
+    .filter((x) => x.total > 0);
 }
 
-/** Rough level label relative to this app's N2/N1 curriculum. */
+/** Rough level label relative to this app's N3–N1 curriculum. */
 export function levelLabel(lp: LevelProgress[]): string {
-  const [n2, n1] = lp.map((x) => (x.total ? x.solid / x.total : 0));
+  const ratio = (level: Level) => {
+    const x = lp.find((l) => l.level === level);
+    return x && x.total ? x.solid / x.total : 0;
+  };
+  const [n3, n2, n1] = [ratio('N3'), ratio('N2'), ratio('N1')];
+  if (n2 < 0.1 && n1 < 0.1 && n3 < 0.6 && lp.some((l) => l.level === 'N3')) return n3 < 0.2 ? 'N3 입문' : 'N3 다지기';
   if (n2 >= 0.9 || n1 >= 0.3) {
     if (n1 < 0.3) return 'N1 도전';
     if (n1 < 0.6) return 'N1 중급';

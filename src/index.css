@@ -1764,3 +1764,41 @@ textarea.input {
 .in-claude .lesson-top {
   padding-top: calc(12px + env(safe-area-inset-top, 0px));
 }
+
+/* quotes */
+.quote-line {
+  margin-top: 12px;
+}
+.quote-line .jp {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 2;
+}
+.quote-ko {
+  font-size: 16px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+.quote-src {
+  margin-top: 8px;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--surface);
+  display: inline-block;
+}
+.quote-links {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+.yt-link .yt-ico.ref {
+  background: var(--primary);
+  font-family: var(--font-display);
+  font-weight: 800;
+}
+.chip.n3 {
+  color: #fff;
+  background: var(--ok);
+  border-color: var(--ok);
+}

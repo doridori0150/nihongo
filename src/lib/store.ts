@@ -61,6 +61,19 @@ export interface Progress {
   acc: Record<string, Record<string, [number, number]>>;
   settings: Settings;
   ai: AiLogEntry[];
+  /** flashcard deck: items the learner checked to memorize */
+  deck: Record<string, DeckRec>;
+}
+
+export interface DeckRec {
+  /** false once removed (kept so the removal syncs to other devices) */
+  on: boolean;
+  /** -1 new, 0..4 = INTERVALS[stage] days, 5 mastered */
+  stage: number;
+  due: string;
+  added: number;
+  reps: number;
+  u: number;
 }
 
 const KEY = 'nd.progress';
@@ -85,6 +98,7 @@ function fresh(): Progress {
     acc: {},
     settings: { ...DEFAULT_SETTINGS },
     ai: [],
+    deck: {},
   };
 }
 
@@ -379,6 +393,11 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     }
     acc[d] = merged;
   }
+  const deck: Progress['deck'] = { ...(a.deck ?? {}) };
+  for (const [id, rec] of Object.entries(b.deck ?? {})) {
+    const mine = deck[id];
+    if (!mine || rec.u > mine.u) deck[id] = rec;
+  }
   const seenAi = new Set<string>();
   const ai = [...a.ai, ...b.ai]
     .filter((e) => (seenAi.has(e.id) ? false : (seenAi.add(e.id), true)))
@@ -393,7 +412,69 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     acc,
     settings: (b.settings?.u ?? 0) > (a.settings?.u ?? 0) ? { ...DEFAULT_SETTINGS, ...b.settings } : a.settings,
     ai,
+    deck,
   };
+}
+
+// ───────── flashcard deck ─────────
+
+export const DECK_MASTERED = INTERVALS.length;
+
+export function setInDeck(ids: string[], on: boolean) {
+  const d = today();
+  const now = Date.now();
+  update((p) => {
+    const deck = { ...p.deck };
+    for (const id of ids) {
+      const prev = deck[id];
+      if (on) deck[id] = prev?.on ? prev : { on: true, stage: -1, due: d, added: now, reps: prev?.reps ?? 0, u: now };
+      else if (prev?.on) deck[id] = { ...prev, on: false, u: now };
+    }
+    return { ...p, deck };
+  });
+}
+
+export type CardRating = 'again' | 'hard' | 'good';
+
+/** again: back to the start (seen again today), hard: tomorrow, good: next step of 1·3·7·14·28 days. */
+export function rateCards(results: { id: string; rating: CardRating }[]) {
+  const d = today();
+  const now = Date.now();
+  update((p) => {
+    const deck = { ...p.deck };
+    for (const { id, rating } of results) {
+      const prev = deck[id];
+      if (!prev?.on) continue;
+      let stage = prev.stage;
+      let due = d;
+      if (rating === 'again') {
+        stage = 0;
+        due = addDays(d, 1);
+      } else if (rating === 'hard') {
+        stage = Math.max(stage, 0);
+        due = addDays(d, 1);
+      } else {
+        stage = Math.min(Math.max(stage, -1) + 1, DECK_MASTERED);
+        due = addDays(d, stage >= DECK_MASTERED ? 60 : INTERVALS[stage]);
+      }
+      deck[id] = { ...prev, stage, due, reps: prev.reps + 1, u: now };
+    }
+    return { ...p, deck };
+  });
+}
+
+export function deckIds(p: Progress): string[] {
+  return Object.entries(p.deck ?? {})
+    .filter(([, r]) => r.on)
+    .sort((a, b) => b[1].added - a[1].added)
+    .map(([id]) => id);
+}
+
+export function deckDue(p: Progress, date = today()): string[] {
+  return Object.entries(p.deck ?? {})
+    .filter(([, r]) => r.on && r.due <= date)
+    .sort((a, b) => (a[1].due < b[1].due ? -1 : a[1].due > b[1].due ? 1 : a[1].added - b[1].added))
+    .map(([id]) => id);
 }
 
 export function replaceFromSync(next: Progress) {

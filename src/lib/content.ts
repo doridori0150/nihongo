@@ -1,5 +1,8 @@
+import { plain } from './jtext';
+
 export type Src = 'drama' | 'anime' | 'manga' | 'novel' | 'daily' | 'travel';
-export type Level = 'N2' | 'N1';
+export type Level = 'N3' | 'N2' | 'N1';
+export type Medium = 'anime' | 'manga' | 'game' | 'drama' | 'film' | 'novel';
 
 export interface Example {
   jp: string;
@@ -25,6 +28,7 @@ export interface Word {
   note: string;
   examples: Example[];
   cloze: Cloze;
+  course?: 'otaku';
 }
 
 export interface Grammar {
@@ -50,6 +54,23 @@ export interface Phrase {
   scene: string;
   theme: string;
   cloze: Omit<Cloze, 'ex'>;
+}
+
+export interface Quote {
+  id: string;
+  line: string;
+  ko: string;
+  medium: Medium;
+  work: string;
+  work_ko: string;
+  speaker: string;
+  speaker_ko: string;
+  level: Level;
+  point: string;
+  note: string;
+  examples: Example[];
+  yt: string;
+  ref: string;
 }
 
 export interface Situation {
@@ -90,16 +111,30 @@ export interface Content {
   situations: Situation[];
   opinions: Opinion[];
   roleplays: Roleplay[];
-  byId: Map<string, Word | Grammar | Phrase>;
+  quotes: Quote[];
+  characters: string[];
+  byId: Map<string, Item>;
 }
 
-export type Item = Word | Grammar | Phrase;
-export type ItemKind = 'w' | 'g' | 'p';
+export type Item = Word | Grammar | Phrase | Quote;
+export type ItemKind = 'w' | 'g' | 'p' | 'q';
 
 export const kindOf = (id: string): ItemKind => id[0] as ItemKind;
 export const isWord = (it: Item): it is Word => it.id.startsWith('w:');
 export const isGrammar = (it: Item): it is Grammar => it.id.startsWith('g:');
 export const isPhrase = (it: Item): it is Phrase => it.id.startsWith('p:');
+export const isQuote = (it: Item): it is Quote => it.id.startsWith('q:');
+
+export const MEDIUM_GROUP = {
+  anime: { label: '애니·만화', icon: '🎌', media: ['anime', 'manga', 'game'] as Medium[] },
+  screen: { label: '드라마·영화', icon: '🎬', media: ['drama', 'film'] as Medium[] },
+  novel: { label: '소설·문학', icon: '📚', media: ['novel'] as Medium[] },
+};
+export type MediumGroup = keyof typeof MEDIUM_GROUP;
+export const groupOf = (m: Medium): MediumGroup => (m === 'drama' || m === 'film' ? 'screen' : m === 'novel' ? 'novel' : 'anime');
+export const MEDIUM_LABEL: Record<Medium, string> = {
+  anime: '애니', manga: '만화', game: '게임', drama: '드라마', film: '영화', novel: '소설',
+};
 
 export const SRC_LABEL: Record<Src, string> = {
   drama: '📺 드라마풍',
@@ -125,10 +160,12 @@ export function loadContent(): Promise<Content> {
     get<Grammar[]>('grammar'),
     get<Phrase[]>('phrases'),
     get<{ situations: Situation[]; opinions: Opinion[]; roleplays: Roleplay[] }>('qa'),
-  ]).then(([words, grammar, phrases, qa]) => {
+    get<Quote[]>('quotes').catch(() => [] as Quote[]),
+    get<string[]>('characters').catch(() => [] as string[]),
+  ]).then(([words, grammar, phrases, qa, quotes, characters]) => {
     const byId = new Map<string, Item>();
-    for (const it of [...words, ...grammar, ...phrases]) byId.set(it.id, it);
-    return { words, grammar, phrases, ...qa, byId };
+    for (const it of [...words, ...grammar, ...phrases, ...quotes]) byId.set(it.id, it);
+    return { words, grammar, phrases, ...qa, quotes, characters, byId };
   });
   loading.catch(() => (loading = null));
   return loading;
@@ -138,10 +175,11 @@ export function loadContent(): Promise<Content> {
 export function itemTitle(it: Item): string {
   if (isWord(it)) return it.word;
   if (isGrammar(it)) return it.pattern;
+  if (isQuote(it)) return plain(it.line);
   return it.expression;
 }
 
 export function itemMeaning(it: Item): string {
-  if (isPhrase(it)) return it.ko;
+  if (isPhrase(it) || isQuote(it)) return it.ko;
   return it.meaning;
 }

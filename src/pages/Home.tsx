@@ -1,5 +1,10 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { Avatar, Bubble } from '../components/Avatar';
 import { Sheet } from '../components/common';
+import { CAST, CLUB, type MemberId, say } from '../lib/cast';
+import { MEDIUM_GROUP, type MediumGroup } from '../lib/content';
+import { plain } from '../lib/jtext';
+import { todaysQuote } from './Quotes';
 import { ItemCard } from '../components/ItemCard';
 import { JP, Speak } from '../components/JP';
 import { getApiKey } from '../lib/aiKey';
@@ -48,9 +53,11 @@ export function Home({ content, start, go }: Props) {
 
   return (
     <div className={`page home ${p.settings.furigana ? '' : 'furi-off'}`}>
+      <ClubBanner content={content} />
       <Dashboard content={content} />
       <div className="home-grid">
         <WordsSection words={words} done={!!plan.done.words} start={start} content={content} onOpen={setOpen} />
+        <QuotesSection content={content} go={go} />
         <PhrasesSection phrases={phrases} done={!!plan.done.phrases} start={start} content={content} />
         <GrammarSection grammar={grammar} done={!!plan.done.grammar} start={start} content={content} />
         {situation && <TalkSection situation={situation} done={!!plan.done.ai} go={go} />}
@@ -64,6 +71,36 @@ export function Home({ content, start, go }: Props) {
         </Sheet>
       )}
     </div>
+  );
+}
+
+// ───────── club room ─────────
+
+function ClubBanner({ content }: { content: Content }) {
+  const p = useProgress();
+  const d = today();
+  const due = dueItems(p, d).filter((id) => content.byId.has(id)).length;
+  const sig = signals(p, content, p.days[d]);
+  const allDone = sig[0].light === 'green' && sig[1].light === 'green';
+  const seed = diffDays(d, '2026-01-01');
+  const s = allDone ? say('allDone', seed) : due > 0 ? say('reviewDue', seed) : say(new Date().getHours() < 11 ? 'greetMorning' : 'greet', seed);
+  return (
+    <section className="club">
+      <div className="club-head">
+        <div>
+          <div className="club-name">
+            {CLUB.name} <span className="muted small">{CLUB.ko}</span>
+          </div>
+          <div className="small muted">오늘도 부실에 모였다. 너는 한국에서 온 신입 부원.</div>
+        </div>
+        <div className="club-members">
+          {(Object.keys(CAST) as MemberId[]).map((id) => (
+            <Avatar key={id} id={id} size={36} title />
+          ))}
+        </div>
+      </div>
+      <Bubble member={s.member} line={s.line} size={52} />
+    </section>
   );
 }
 
@@ -158,6 +195,7 @@ function Dashboard({ content }: { content: Content }) {
 
 function Section({
   icon,
+  host,
   title,
   meta,
   done,
@@ -167,6 +205,8 @@ function Section({
   extra,
 }: {
   icon: string;
+  /** club member who hosts this section (shown instead of the icon) */
+  host?: MemberId;
   title: string;
   meta?: string;
   done?: boolean;
@@ -178,7 +218,7 @@ function Section({
   return (
     <section className={`section ${className}`}>
       <header className="section-head">
-        <span className="section-icon">{icon}</span>
+        {host ? <Avatar id={host} size={44} title /> : <span className="section-icon">{icon}</span>}
         <div style={{ flex: 1, minWidth: 0 }}>
           <h2>{title}</h2>
           {meta && <div className="section-meta">{meta}</div>}
@@ -214,6 +254,7 @@ function WordsSection({
   return (
     <Section
       icon="📖"
+      host="hiyori"
       title="오늘의 단어"
       meta={`${words.length}개 · N2 ${n2} / N1 ${words.length - n2}`}
       done={done}
@@ -263,8 +304,9 @@ function PhrasesSection({ phrases, done, start, content }: { phrases: Phrase[]; 
   return (
     <Section
       icon="💬"
-      title="오늘의 문장"
-      meta="드라마·만화·소설·일상 속 표현"
+      host="ritsu"
+      title="오늘의 표현"
+      meta="일상·여행·드라마 속 회화 표현"
       done={done}
       actions={
         <button className={`btn ${done ? 'ghost' : ''}`} onClick={() => start(done ? todayPracticeSession(content, 'phrases') : phrasesSession(content))} disabled={!phrases.length}>
@@ -297,6 +339,7 @@ function GrammarSection({ grammar, done, start, content }: { grammar: Grammar[];
   return (
     <Section
       icon="🧩"
+      host="minato"
       title="오늘의 문법"
       meta={`${g.level} · ${g.theme}`}
       done={done}
@@ -332,6 +375,7 @@ function ReviewSection({ content, start, go }: { content: Content; start: Props[
   return (
     <Section
       icon="🔁"
+      host="saeko"
       title="복습"
       meta="틀린 문제 1·3·7·14·28일 간격"
       actions={
@@ -377,6 +421,7 @@ function TalkSection({ situation, done, go }: { situation: Situation; done: bool
   return (
     <Section
       icon="🗣️"
+      host="ritsu"
       title="오늘의 회화"
       meta={`상황 · ${situation.theme}`}
       done={done}
@@ -436,7 +481,7 @@ function YouTubeSection({ grammar, words, situation }: { grammar?: Grammar; word
     word && { t: `「${word.word}」 실제로 어떻게 쓰나`, d: '일본어 사용 예 검색', url: ytSearch(`${word.word} 意味 使い方`) },
   ].filter(Boolean) as { t: string; d: string; url: string }[];
   return (
-    <Section icon="📺" title="오늘의 유튜브" meta="오늘 배운 걸 영상으로 한 번 더">
+    <Section icon="📺" host="shizuku" title="오늘의 유튜브" meta="오늘 배운 걸 영상으로 한 번 더">
       <div className="yt-links">
         {links.map((l) => (
           <a key={l.url} className="yt-link" href={l.url} target="_blank" rel="noreferrer">
@@ -486,6 +531,41 @@ function DajareSection() {
       </div>
       <div className="note dajare-explain">💡 {dj.explain}</div>
       <div className="risk">⚠️ {dj.risk}</div>
+    </Section>
+  );
+}
+
+function QuotesSection({ content, go }: { content: Content; go: Props['go'] }) {
+  const groups = Object.keys(MEDIUM_GROUP) as MediumGroup[];
+  return (
+    <Section icon="🎌" host="shizuku" title="오늘의 명대사" meta="애니·드라마·소설 원작 대사로 배우는 일본어" className="span-2">
+      {content.quotes.length === 0 ? (
+        <div className="small muted">명대사를 준비 중이에요.</div>
+      ) : (
+        <div className="quote-tiles">
+          {groups.map((g) => {
+            const q = todaysQuote(content, g);
+            return (
+              <button key={g} className="quote-tile" onClick={() => go(`quotes-${g}`)}>
+                <div className="qt-cat">
+                  {MEDIUM_GROUP[g].icon} {MEDIUM_GROUP[g].label}
+                </div>
+                {q ? (
+                  <>
+                    <div className="qt-line jp">{plain(q.line)}</div>
+                    <div className="qt-src">
+                      원작 출처 · <b>{q.work_ko}</b>
+                    </div>
+                  </>
+                ) : (
+                  <div className="qt-src">준비 중</div>
+                )}
+                <div className="qt-more">더 보기 →</div>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </Section>
   );
 }

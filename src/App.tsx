@@ -1,4 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
+import { ArtContext } from './components/Avatar';
+import { FlashcardSession } from './components/Flashcards';
 import { Lesson } from './components/Lesson';
 import { ConfirmHost } from './components/confirm';
 import { type Content, loadContent } from './lib/content';
@@ -8,30 +10,38 @@ import { syncNow, useSyncStatus } from './lib/sync';
 import { Home } from './pages/Home';
 import { Library } from './pages/Library';
 import { Notes } from './pages/Notes';
+import { Quotes } from './pages/Quotes';
 import { Settings } from './pages/Settings';
+import { Study } from './pages/Study';
 
 // The AI screen carries the Anthropic SDK, so load it only when opened.
 const AiPractice = lazy(() => import('./pages/AiPractice').then((m) => ({ default: m.AiPractice })));
 
 const TABS = [
-  { key: 'home', icon: '🏠', label: '오늘' },
-  { key: 'library', icon: '📚', label: '단어장' },
-  { key: 'notes', icon: '🔁', label: '복습노트' },
+  { key: 'home', icon: '🏠', label: '부실' },
+  { key: 'study', icon: '📚', label: '공부' },
+  { key: 'notes', icon: '🔁', label: '복습' },
   { key: 'ai', icon: '🗣️', label: '회화' },
   { key: 'settings', icon: '⚙️', label: '설정' },
 ] as const;
-type Route = (typeof TABS)[number]['key'];
 
-function readRoute(): Route {
+const PAGES = ['home', 'study', 'notes', 'ai', 'settings', 'library', 'quotes'] as const;
+type Page = (typeof PAGES)[number];
+
+/** Routes are bare hash tokens (`#study-n3-words`): page, then an optional sub-page after the first dash. */
+function readRoute(): { page: Page; sub: string } {
   const h = location.hash.replace(/^#\/?/, '');
-  return (TABS.find((t) => t.key === h)?.key ?? 'home') as Route;
+  const [head, ...rest] = h.split('-');
+  const page = (PAGES as readonly string[]).includes(head) ? (head as Page) : 'home';
+  return { page, sub: page === head ? rest.join('-') : '' };
 }
 
 export default function App() {
   const [content, setContent] = useState<Content | null>(null);
   const [error, setError] = useState('');
-  const [route, setRoute] = useState<Route>(readRoute);
+  const [route, setRoute] = useState(readRoute);
   const [session, setSession] = useState<Session | null>(null);
+  const [cards, setCards] = useState<string[] | null>(null);
   const [toast, setToast] = useState('');
 
   useEffect(() => {
@@ -43,7 +53,10 @@ export default function App() {
   useEffect(() => {
     const onHash = () => setRoute(readRoute());
     // the hardware/browser back button closes an open lesson instead of leaving the app
-    const onPop = () => setSession(null);
+    const onPop = () => {
+      setSession(null);
+      setCards(null);
+    };
     window.addEventListener('hashchange', onHash);
     window.addEventListener('popstate', onPop);
     return () => {
@@ -58,23 +71,37 @@ export default function App() {
     window.scrollTo(0, 0);
   }, []);
 
-  const start = useCallback((s: Session | null) => {
-    if (!s) {
-      setToast('지금은 할 수 있는 항목이 없어요');
-      setTimeout(() => setToast(''), 2200);
-      return;
-    }
+  const pushOverlay = () => {
     try {
       history.pushState({ lesson: true }, '');
     } catch {
       /* history may be locked down in embedded viewers; the close button still works */
     }
+  };
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2200);
+  };
+
+  const start = useCallback((s: Session | null) => {
+    if (!s) return showToast('지금은 할 수 있는 항목이 없어요');
+    pushOverlay();
     setSession(s);
   }, []);
 
-  const closeLesson = useCallback(() => {
+  const startCards = useCallback((ids: string[]) => {
+    if (!ids.length) return showToast('넘길 카드가 없어요');
+    pushOverlay();
+    setCards(ids);
+  }, []);
+
+  const closeOverlay = useCallback(() => {
     if (history.state?.lesson) history.back();
-    else setSession(null);
+    else {
+      setSession(null);
+      setCards(null);
+    }
   }, []);
 
   if (error)
@@ -92,44 +119,59 @@ export default function App() {
     return (
       <div className="empty" style={{ paddingTop: 120 }}>
         <div className="big">😴</div>
-        단어들을 깨우는 중…
+        부원들을 깨우는 중…
       </div>
     );
 
+  const { page, sub } = route;
+  const tab = page === 'library' ? 'study' : page === 'quotes' ? 'home' : page;
+
   return (
-    <div className="app">
-      <TopBar route={route} go={go} />
-      {route === 'home' && <Home content={content} start={start} go={go} />}
-      {route === 'library' && <Library content={content} />}
-      {route === 'notes' && <Notes content={content} start={start} />}
-      {route === 'ai' && (
-        <Suspense fallback={<div className="empty">불러오는 중…</div>}>
-          <AiPractice content={content} go={go} />
-        </Suspense>
-      )}
-      {route === 'settings' && <Settings content={content} />}
+    <ArtContext.Provider value={content.characters}>
+      <div className="app">
+        <TopBar tab={tab} go={go} />
+        {page === 'home' && <Home content={content} start={start} go={go} />}
+        {page === 'study' && <Study content={content} sub={sub} go={go} start={start} startCards={startCards} />}
+        {page === 'quotes' && <Quotes content={content} sub={sub} go={go} />}
+        {page === 'library' && <Library content={content} />}
+        {page === 'notes' && <Notes content={content} start={start} />}
+        {page === 'ai' && (
+          <Suspense fallback={<div className="empty">불러오는 중…</div>}>
+            <AiPractice content={content} go={go} />
+          </Suspense>
+        )}
+        {page === 'settings' && <Settings content={content} />}
 
-      <nav className="tabbar">
-        <div className="tabbar-inner">
-          {TABS.map((t) => (
-            <button key={t.key} className={`tab ${route === t.key ? 'on' : ''}`} onClick={() => go(t.key)}>
-              <span className="ico">{t.icon}</span>
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </nav>
+        <nav className="tabbar">
+          <div className="tabbar-inner">
+            {TABS.map((t) => (
+              <button key={t.key} className={`tab ${tab === t.key ? 'on' : ''}`} onClick={() => go(t.key)}>
+                <span className="ico">{t.icon}</span>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </nav>
 
-      {session && (
-        <Lesson key={session.title + session.exercises.length} title={session.title} exercises={session.exercises} content={content} onFinish={session.onFinish} onExit={closeLesson} />
-      )}
-      {toast && <div className="toast">{toast}</div>}
-      <ConfirmHost />
-    </div>
+        {session && (
+          <Lesson
+            key={session.title + session.exercises.length}
+            title={session.title}
+            exercises={session.exercises}
+            content={content}
+            onFinish={session.onFinish}
+            onExit={closeOverlay}
+          />
+        )}
+        {cards && <FlashcardSession key={cards.join()} ids={cards} content={content} onExit={closeOverlay} />}
+        {toast && <div className="toast">{toast}</div>}
+        <ConfirmHost />
+      </div>
+    </ArtContext.Provider>
   );
 }
 
-function TopBar({ route, go }: { route: Route; go: (r: string) => void }) {
+function TopBar({ tab, go }: { tab: string; go: (r: string) => void }) {
   const p = useProgress();
   const sync = useSyncStatus();
   const s = streak(p);
@@ -137,29 +179,25 @@ function TopBar({ route, go }: { route: Route; go: (r: string) => void }) {
   return (
     <header className="topbar">
       <div className="topbar-inner">
-      <button className="brand" onClick={() => go('home')}>
-        <span className="hanko">日</span>
-        にほんご Daily
-      </button>
-      <nav className="top-nav">
-        {TABS.map((t) => (
-          <button key={t.key} className={route === t.key ? 'on' : ''} onClick={() => go(t.key)}>
-            {t.label}
-          </button>
-        ))}
-      </nav>
-      <span className={`stat fire ${s.todayDone ? '' : 'cold'}`} title={s.todayDone ? '연속 학습일' : '오늘 학습하면 불이 붙어요'}>
-        🔥 {s.days}일
-      </span>
-      {syncIcon && (
-        <button
-          className={`sync-dot ${sync.state === 'syncing' ? 'spin' : ''}`}
-          title={sync.state === 'error' ? sync.message : '동기화'}
-          onClick={() => syncNow()}
-        >
-          {syncIcon}
+        <button className="brand" onClick={() => go('home')}>
+          <span className="hanko">日</span>
+          にほんご Daily
         </button>
-      )}
+        <nav className="top-nav">
+          {TABS.map((t) => (
+            <button key={t.key} className={tab === t.key ? 'on' : ''} onClick={() => go(t.key)}>
+              {t.label}
+            </button>
+          ))}
+        </nav>
+        <span className={`stat fire ${s.todayDone ? '' : 'cold'}`} title={s.todayDone ? '연속 학습일' : '오늘 학습하면 불이 붙어요'}>
+          🔥 {s.days}일
+        </span>
+        {syncIcon && (
+          <button className={`sync-dot ${sync.state === 'syncing' ? 'spin' : ''}`} title={sync.state === 'error' ? sync.message : '동기화'} onClick={() => syncNow()}>
+            {syncIcon}
+          </button>
+        )}
       </div>
     </header>
   );

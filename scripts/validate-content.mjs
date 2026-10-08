@@ -3,11 +3,13 @@ import { readFileSync } from 'node:fs';
 import { parseJText } from './jtext.mjs';
 
 const SRC = ['drama', 'anime', 'manga', 'novel', 'daily', 'travel'];
-const LEVELS = ['N2', 'N1'];
+const LEVELS = ['N3', 'N2', 'N1'];
+const MEDIA = ['anime', 'manga', 'game', 'drama', 'film', 'novel'];
+const COURSES = ['otaku'];
 
 const [, , type, ...files] = process.argv;
-if (!['vocab', 'grammar', 'phrases', 'qa'].includes(type) || files.length === 0) {
-  console.error('usage: node scripts/validate-content.mjs <vocab|grammar|phrases|qa> <file.json>...');
+if (!['vocab', 'grammar', 'phrases', 'qa', 'quotes'].includes(type) || files.length === 0) {
+  console.error('usage: node scripts/validate-content.mjs <vocab|grammar|phrases|qa|quotes> <file.json>...');
   process.exit(2);
 }
 
@@ -72,7 +74,8 @@ function checkVocab(w, where) {
   str(where, w.pos, 'pos');
   str(where, w.theme, 'theme');
   str(where, w.note, 'note');
-  if (!LEVELS.includes(w.level)) report(where, 'level 은 N2/N1');
+  if (!LEVELS.includes(w.level)) report(where, 'level 은 N3/N2/N1');
+  if (w.course !== undefined && !COURSES.includes(w.course)) report(where, `course 는 ${COURSES.join('/')} 중 하나`);
   if (!Array.isArray(w.examples) || w.examples.length < 2) return report(where, 'examples 2개 이상 필요');
   const parsed = w.examples.map((ex, i) => example(`${where} ex${i}`, ex));
   if (new Set(w.examples.map((e) => e.src)).size < 2) report(where, 'examples 의 src 가 서로 달라야 함');
@@ -81,7 +84,7 @@ function checkVocab(w, where) {
 
 function checkGrammar(g, where) {
   for (const k of ['pattern', 'meaning', 'formation', 'explanation', 'theme']) str(where, g[k], k);
-  if (!LEVELS.includes(g.level)) report(where, 'level 은 N2/N1');
+  if (!LEVELS.includes(g.level)) report(where, 'level 은 N3/N2/N1');
   if (!Array.isArray(g.examples) || g.examples.length < 3) return report(where, 'examples 3개 이상 필요');
   const parsed = g.examples.map((ex, i) => example(`${where} ex${i}`, ex));
   if (!Array.isArray(g.cloze) || g.cloze.length < 2) return report(where, 'cloze 2개 이상 필요');
@@ -91,11 +94,22 @@ function checkGrammar(g, where) {
 function checkPhrase(ph, where) {
   const p = jtext(where, ph.jp, 'jp', { minChunks: 3, maxChunks: 9 });
   for (const k of ['ko', 'scene', 'expression', 'note', 'theme']) str(where, ph[k], k);
-  if (!LEVELS.includes(ph.level)) report(where, 'level 은 N2/N1');
+  if (!LEVELS.includes(ph.level)) report(where, 'level 은 N3/N2/N1');
   if (!SRC.includes(ph.src)) report(where, `src는 ${SRC.join('/')} 중 하나`);
   if (p && typeof ph.expression === 'string' && !p.plain.includes(ph.expression))
     report(where, `expression 「${ph.expression}」가 문장에 없음`);
   if (p) cloze(where, ph.cloze, [p]);
+}
+
+function checkQuote(q, where) {
+  const p = jtext(where, q.line, 'line', { minChunks: 1, maxChunks: 12 });
+  if (p && p.plain.length > 45) report(where, `line 이 너무 김 (${p.plain.length}자, 45자 이하)`);
+  for (const k of ['ko', 'work', 'work_ko', 'speaker', 'speaker_ko', 'note', 'point', 'yt', 'ref']) str(where, q[k], k);
+  if (typeof q.ref === 'string' && !q.ref.startsWith('https://')) report(where, 'ref 는 https URL');
+  if (!MEDIA.includes(q.medium)) report(where, `medium 은 ${MEDIA.join('/')} 중 하나`);
+  if (!LEVELS.includes(q.level)) report(where, 'level 은 N3/N2/N1');
+  if (!Array.isArray(q.examples) || q.examples.length < 2) return report(where, 'examples 2개 이상 필요');
+  q.examples.forEach((ex, i) => example(`${where} ex${i}`, ex));
 }
 
 function checkQA(qa, file) {
@@ -141,7 +155,7 @@ for (const file of files) {
   const seen = new Set();
   data.forEach((item, i) => {
     itemCount++;
-    const label = item?.word ?? item?.pattern ?? item?.expression ?? '';
+    const label = item?.word ?? item?.pattern ?? item?.expression ?? item?.work ?? '';
     const where = `[${i}] ${label}`;
     if (type === 'vocab') {
       const key = `${item.word}|${item.reading}`;
@@ -152,6 +166,11 @@ for (const file of files) {
       if (seen.has(item.pattern)) report(where, '파일 내 중복 문법');
       seen.add(item.pattern);
       checkGrammar(item, where);
+    } else if (type === 'quotes') {
+      const key = `${item.work}|${item.line}`;
+      if (seen.has(key)) report(where, '파일 내 중복 대사');
+      seen.add(key);
+      checkQuote(item, where);
     } else {
       checkPhrase(item, where);
     }

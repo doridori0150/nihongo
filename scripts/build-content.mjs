@@ -105,13 +105,36 @@ for (const { file, data } of readDir('qa')) {
   for (const r of data.roleplays ?? []) if (jtextOk(r.opening, `${file} roleplay`)) qa.roleplays.push({ id: `r:${hash(r.title + r.opening)}`, ...r });
 }
 
+// ───── quotes ─────
+const quotes = [];
+const seenQuotes = new Set();
+for (const { file, data } of readDir('quotes')) {
+  for (const q of data) {
+    const where = `${file} ${q.work}`;
+    if (!jtextOk(q.line, where) || !q.examples?.every((e, i) => jtextOk(e.jp, `${where} ex${i}`))) continue;
+    const key = `${q.work}|${plainOf(q.line)}`;
+    if (seenQuotes.has(key)) {
+      warn(`${where}: 중복 대사 (건너뜀)`);
+      continue;
+    }
+    seenQuotes.add(key);
+    quotes.push({ id: `q:${hash(key)}`, ...q });
+  }
+}
+
+// ───── character art dropped into public/characters ─────
+const charDir = join(ROOT, 'public', 'characters');
+const characters = existsSync(charDir) ? readdirSync(charDir).filter((f) => /.(png|webp|jpg)$/i.test(f)).sort() : [];
+
 mkdirSync(OUT, { recursive: true });
 const write = (name, value) => writeFileSync(join(OUT, `${name}.json`), JSON.stringify(value));
 write('vocab', words);
 write('grammar', grammar);
 write('phrases', phrases);
 write('qa', qa);
+write('quotes', quotes);
+write('characters', characters);
 
-const lv = (xs) => `N2 ${xs.filter((x) => x.level === 'N2').length} / N1 ${xs.filter((x) => x.level === 'N1').length}`;
+const lv = (xs) => ['N3', 'N2', 'N1'].map((l) => `${l} ${xs.filter((x) => x.level === l).length}`).join(' / ');
 console.log(`content: 단어 ${words.length} (${lv(words)}), 문법 ${grammar.length} (${lv(grammar)}), 문장 ${phrases.length} (${lv(phrases)}), ` +
-  `상황 ${qa.situations.length}, 의견 ${qa.opinions.length}, 롤플레이 ${qa.roleplays.length}` + (warnings ? ` — 경고 ${warnings}개` : ''));
+  `상황 ${qa.situations.length}, 의견 ${qa.opinions.length}, 롤플레이 ${qa.roleplays.length}, 명대사 ${quotes.length}, 캐릭터 그림 ${characters.length}` + (warnings ? ` — 경고 ${warnings}개` : ''));

@@ -1,0 +1,471 @@
+/* Cast, study tab, flashcards and famous-lines pages. Tokens come from index.css. */
+
+/* ───────── cast ───────── */
+.avatar {
+  display: inline-block;
+  flex: none;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--card);
+  box-shadow: 0 0 0 2px var(--ring, var(--border));
+}
+.avatar svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+/* drawn art is a bust-up: zoom in on the face for the round crop */
+.avatar img {
+  display: block;
+  width: 165%;
+  height: 165%;
+  max-width: none;
+  margin: -6% 0 0 -32.5%;
+}
+.bubble {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.bubble-body {
+  flex: 1;
+  min-width: 0;
+}
+.bubble-name {
+  font-size: 12px;
+  font-weight: 800;
+  margin: 2px 0 3px 4px;
+}
+.bubble-text {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px 16px 16px 16px;
+  padding: 8px 12px;
+}
+.bubble-text .jp {
+  font-size: 16px;
+  line-height: 1.8;
+}
+.bubble-ko {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.club {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 14px 16px 16px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+}
+.club .bubble-text {
+  background: var(--bg);
+}
+.club-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.club-head > div:first-child {
+  flex: 1;
+  min-width: 180px;
+}
+.club-name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 19px;
+}
+.club-members {
+  display: flex;
+}
+.club-members .avatar + .avatar {
+  margin-left: -8px;
+}
+.feedback-msg .head {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.fb-line {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+.fb-line .jp {
+  font-weight: 700;
+}
+.fb-ko {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  opacity: 0.75;
+}
+
+/* ───────── study ───────── */
+.deck-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+}
+.deck-title {
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 800;
+}
+.course-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.course {
+  --c: var(--primary);
+  text-align: left;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--c);
+  border-radius: 16px;
+  padding: 12px 14px 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: var(--shadow);
+}
+.course:hover:not(:disabled) {
+  border-color: var(--c);
+}
+.course:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.course-title {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 800;
+}
+.course-sub {
+  font-size: 13px;
+  color: var(--muted);
+}
+.course-meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.stack-bar.light {
+  background: var(--surface);
+  height: 6px;
+  margin-top: 4px;
+}
+.stack-bar.light .solid {
+  background: var(--c, var(--primary));
+}
+.small-tiles .course-title {
+  font-size: 16px;
+}
+.check-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.chapter {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.chapter-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 12px 14px;
+  cursor: pointer;
+  text-align: left;
+}
+.chapter-title {
+  flex: 1;
+  font-weight: 800;
+  font-size: 16px;
+}
+.chev {
+  color: var(--faint);
+}
+.chapter-tools {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 10px;
+}
+.study-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-top: 1px solid var(--border);
+  padding: 0 10px 0 6px;
+}
+.study-row.on {
+  background: color-mix(in srgb, var(--ok-soft) 60%, transparent);
+}
+.study-check {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  cursor: pointer;
+}
+.study-check input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.study-check span {
+  position: absolute;
+  inset: 11px;
+  border-radius: 7px;
+  border: 2px solid var(--border-strong);
+  background: var(--card);
+  pointer-events: none;
+}
+.study-check input:checked + span {
+  background: var(--ok);
+  border-color: var(--ok);
+}
+.study-check input:checked + span::after {
+  content: "\2713";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+}
+.study-check input:focus-visible + span {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.study-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border: none;
+  background: none;
+  text-align: left;
+  padding: 9px 4px;
+  cursor: pointer;
+}
+.study-main .w {
+  font-family: var(--font-jp);
+  font-weight: 700;
+  font-size: 17px;
+}
+.study-main .w.grammar {
+  color: var(--violet);
+}
+.study-main .m {
+  font-size: 13px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.learned-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  flex: none;
+}
+
+/* ───────── flashcards ───────── */
+.flashcard {
+  display: block;
+  width: 100%;
+  min-height: 320px;
+  margin-top: 16px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--card);
+  box-shadow: 0 6px 24px rgba(40, 30, 10, 0.08);
+  cursor: pointer;
+  padding: 28px 20px;
+  text-align: center;
+  animation: cardin 0.25s ease-out;
+}
+.flashcard.flipped {
+  animation: flip 0.3s ease-out;
+}
+@keyframes cardin {
+  from {
+    transform: translateY(12px);
+    opacity: 0.4;
+  }
+}
+@keyframes flip {
+  from {
+    transform: rotateY(70deg);
+  }
+}
+.fc-word {
+  font-family: var(--font-display);
+  font-size: 46px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+.fc-word.grammar {
+  font-size: 32px;
+  color: var(--violet);
+}
+.fc-sentence {
+  font-size: 22px;
+}
+.fc-hint {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.fc-tap {
+  margin-top: 40px;
+  color: var(--faint);
+  font-size: 13px;
+}
+.fc-back {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border-strong);
+  cursor: default;
+}
+.fc-reading {
+  font-family: var(--font-jp);
+  font-size: 20px;
+  color: var(--primary);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+.fc-meaning {
+  font-size: 20px;
+  font-weight: 800;
+  margin: 6px 0;
+}
+.fc-ex {
+  margin-top: 12px;
+  text-align: left;
+  font-size: 16px;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .flashcard,
+  .flashcard.flipped {
+    animation: none;
+  }
+}
+
+/* ───────── famous lines ───────── */
+.quote-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+.quote-tile {
+  text-align: left;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 14px;
+  padding: 12px 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.quote-tile:hover {
+  border-color: var(--violet);
+}
+.qt-cat {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--violet);
+}
+.qt-line {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+.qt-src,
+.qt-more {
+  font-size: 12px;
+  color: var(--muted);
+}
+.qt-more {
+  margin-top: auto;
+  color: var(--violet);
+  font-weight: 700;
+}
+.quote-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+.quote-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+}
+.today-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 6px;
+  padding: 2px 8px;
+  margin-bottom: 6px;
+}
+.quote-summary {
+  display: block;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+.qs-line .jp {
+  font-size: 19px;
+  font-weight: 700;
+}
+.qs-ko {
+  font-weight: 700;
+  font-size: 14px;
+}
+.qs-src {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.quote-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}

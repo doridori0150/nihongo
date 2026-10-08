@@ -18,7 +18,7 @@ import { getApiKey } from '../lib/aiKey';
 import { takeAiRequest } from '../lib/nav';
 import { inClaude } from '../lib/runtime';
 import { CLAUDE_APP_URL } from '../lib/links';
-import { type Content, type Example, type Opinion, type Roleplay, type Situation, isGrammar, isPhrase, isWord } from '../lib/content';
+import { type Content, type Example, type Opinion, type Roleplay, type Situation, isGrammar, isPhrase, isQuote, isWord } from '../lib/content';
 import { plain } from '../lib/jtext';
 import { today } from '../lib/date';
 import { addAiLog, addXp, getProgress, local, markDone, useProgress } from '../lib/store';
@@ -71,8 +71,8 @@ function composeTask(c: Content): ComposeTask | null {
         id: `${it.id}#${i}`,
         ko: ex.ko,
         reference: plain(ex.jp),
-        focus: isWord(it) ? it.word : isGrammar(it) ? it.pattern : it.expression,
-        focusMeaning: isPhrase(it) ? '' : it.meaning,
+        focus: isWord(it) ? it.word : isGrammar(it) ? it.pattern : isQuote(it) ? it.point : it.expression,
+        focusMeaning: isPhrase(it) || isQuote(it) ? '' : it.meaning,
       }),
     );
   }
