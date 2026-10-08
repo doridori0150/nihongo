@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Avatar, Bubble, Portrait } from '../components/Avatar';
 import { Sheet } from '../components/common';
-import { CAST, CLUB, type MemberId, say } from '../lib/cast';
+import { CAST, CLUB, type MemberId, gradeOf, membersFor, say } from '../lib/cast';
 import { MEDIUM_GROUP, type MediumGroup } from '../lib/content';
 import { plain } from '../lib/jtext';
 import { todaysQuote } from './Quotes';
@@ -15,7 +15,7 @@ import { CHANNELS, dajareOf, langChanSearch, ytSearch } from '../lib/fun';
 import { type Light, type LevelProgress, levelLabel, levelProgress, overall, signals } from '../lib/level';
 import { requestAi } from '../lib/nav';
 import { Backdrop, spriteUrl } from '../components/Stage';
-import { nextEpisode, useStoryIndex } from '../lib/story';
+import { nextEpisode, storyYear, useStoryIndex } from '../lib/story';
 import { inClaude } from '../lib/runtime';
 import {
   extraWordsSession,
@@ -117,11 +117,12 @@ function ClubHero({ content, go, play }: { content: Content; go: (r: string) => 
   const keyArt = content.art.key.find((f) => !f.includes('_tall'));
   const keyTall = content.art.key.find((f) => f.includes('_tall'));
   const keyBase = `${import.meta.env.BASE_URL}key/`;
-  const members = Object.keys(CAST) as MemberId[];
+  const year = storyYear(p);
+  const members = membersFor(year);
 
   return (
     <section className="room">
-      <div className={`room-scene ${keyArt ? 'has-key' : ''}`}>
+      <div className={`room-scene ${keyArt ? 'has-key' : ''} ${keyTall ? 'has-tall' : ''}`}>
         {keyArt ? (
           <picture>
             {keyTall && <source media="(max-width: 560px)" srcSet={keyBase + keyTall} />}
@@ -177,7 +178,7 @@ function ClubHero({ content, go, play }: { content: Content; go: (r: string) => 
             {CAST[profile].name} <span className="muted small">{CAST[profile].reading}</span>
           </div>
           <div className="small muted" style={{ textAlign: 'center' }}>
-            {CAST[profile].name_ko} · {CAST[profile].grade} · {CAST[profile].role}
+            {CAST[profile].name_ko} · {gradeOf(profile, year)} · {CAST[profile].role}
           </div>
           <div className="note" style={{ marginTop: 12 }}>
             {CAST[profile].bio}

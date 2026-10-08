@@ -25,6 +25,11 @@ const BG_TINT: Record<string, string> = {
   comiket: 'linear-gradient(180deg, #bfe3ff, #fff3d6)',
   shrine_winter: 'linear-gradient(180deg, #dfe9f5, #f7f7fb)',
   apartment: 'linear-gradient(160deg, #3a3550, #1f2233)',
+  kyoto_street: 'linear-gradient(160deg, #f3d9c4, #8c5a3c)',
+  osaka_street: 'linear-gradient(180deg, #2b1d4a, #ff7a59)',
+  ryokan: 'linear-gradient(160deg, #efe3c8, #a8895d)',
+  live_house: 'linear-gradient(180deg, #120d1f, #6b2d8f)',
+  exam_hall: 'linear-gradient(160deg, #eef1f4, #b7c0c9)',
 };
 
 export function bgUrl(art: Art, key: string): string | null {

@@ -673,7 +673,19 @@
   display: contents;
 }
 @media (max-width: 560px) {
-  .room-scene.has-key {
-    aspect-ratio: 1024 / 1180;
+  .room-scene.has-tall {
+    aspect-ratio: 1024 / 1300;
+  }
+}
+/* over the key visual the sign sits bottom-left, clear of faces */
+.room-scene.has-key .room-sign {
+  top: auto;
+  bottom: 10px;
+  left: 10px;
+}
+@media (max-width: 560px) {
+  .room-scene.has-key .room-sign {
+    padding: 4px 9px;
+    font-size: 12px;
   }
 }

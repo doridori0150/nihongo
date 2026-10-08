@@ -4,14 +4,14 @@ import { askConfirm } from '../components/confirm';
 import { JP, Speak } from '../components/JP';
 import { Backdrop, Characters, DialogueBox } from '../components/Stage';
 import { type AiMode, type ChatReply, type ChatTurn, type RoleplayEval, aiMode, clubChat, evaluateRoleplay } from '../lib/ai';
-import { CAST, type MemberId, PERSONA } from '../lib/cast';
+import { CAST, type MemberId, PERSONA, gradeOf, membersFor } from '../lib/cast';
 import type { Content } from '../lib/content';
 import { kana } from '../lib/jtext';
 import { CLAUDE_APP_URL } from '../lib/links';
 import { inClaude } from '../lib/runtime';
 import { speak } from '../lib/speech';
 import { addAiLog, addXp, local, markDone, useProgress } from '../lib/store';
-import { fill, playerName } from '../lib/story';
+import { fill, playerName, storyYear } from '../lib/story';
 import { getApiKey } from '../lib/aiKey';
 import { AiPractice } from './AiPractice';
 
@@ -27,6 +27,7 @@ interface UiTurn extends ChatTurn {
 export function Talk({ content, sub, go }: { content: Content; sub: string; go: (r: string) => void }) {
   const [ai, setAi] = useState<AiMode | null>(inClaude ? null : getApiKey() ? 'apikey' : 'none');
   const [member, setMember] = useState<MemberId | null>(null);
+  const year = storyYear(useProgress());
   useEffect(() => {
     if (inClaude) void aiMode().then(setAi);
   }, []);
@@ -59,12 +60,12 @@ export function Talk({ content, sub, go }: { content: Content; sub: string; go: 
         </div>
       )}
       <div className="member-grid">
-        {(Object.keys(CAST) as MemberId[]).map((id) => (
+        {membersFor(year).map((id) => (
           <button key={id} className="member-card" disabled={ai !== 'claude' && ai !== 'apikey'} onClick={() => setMember(id)} style={{ ['--c' as string]: CAST[id].color }}>
             <Portrait id={id} />
             <div className="member-name">{CAST[id].name}</div>
             <div className="small muted">
-              {CAST[id].name_ko} · {CAST[id].grade}
+              {CAST[id].name_ko} · {gradeOf(id, year)}
             </div>
           </button>
         ))}

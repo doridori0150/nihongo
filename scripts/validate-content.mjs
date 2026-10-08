@@ -112,7 +112,7 @@ function checkQuote(q, where) {
   q.examples.forEach((ex, i) => example(`${where} ex${i}`, ex));
 }
 
-const BGS = ['clubroom', 'clubroom_evening', 'classroom', 'hallway', 'school_gate', 'rooftop', 'station', 'akihabara', 'shopping_street', 'convenience_store', 'beach_inn', 'festival_night', 'comiket', 'shrine_winter', 'apartment'];
+const BGS = ['clubroom', 'clubroom_evening', 'classroom', 'hallway', 'school_gate', 'rooftop', 'station', 'akihabara', 'shopping_street', 'convenience_store', 'beach_inn', 'festival_night', 'comiket', 'shrine_winter', 'apartment', 'kyoto_street', 'osaka_street', 'ryokan', 'live_house', 'exam_hall'];
 const CAST_IDS = ['saeko', 'minato', 'shizuku', 'ritsu', 'hiyori', 'akane', 'keita'];
 const FACES = ['normal', 'happy', 'angry', 'sad', 'surprised', 'smug', 'shy'];
 

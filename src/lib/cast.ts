@@ -1,7 +1,7 @@
 // 放課後アニ研 (After-school Anime Club) — the app's original cast.
 // Lines are JText (漢字{かんじ}) so furigana shows; `ko` is the Korean gloss.
 
-export type MemberId = 'minato' | 'shizuku' | 'hiyori' | 'ritsu' | 'saeko';
+export type MemberId = 'minato' | 'shizuku' | 'hiyori' | 'ritsu' | 'saeko' | 'akane' | 'keita';
 
 export interface Line {
   jp: string;
@@ -17,6 +17,10 @@ export interface Member {
   role: string;
   bio: string;
   color: string;
+  /** Story year the member joins the club (default 1). */
+  joinYear?: number;
+  /** Grade/role as they change in later story years. */
+  later?: Record<number, { grade: string; role?: string }>;
 }
 
 export const CLUB = { name: '放課後アニ研', reading: 'ほうかごアニけん', ko: '방과후 애니메이션 연구회' };
@@ -41,6 +45,7 @@ export const CAST: Record<MemberId, Member> = {
     role: '문법 담당',
     bio: '안경 쓴 냉정한 부장. 80년대 OVA부터 이번 분기 신작까지 다 본 걸어다니는 애니 연표. 설명이 길어지면 안경을 고쳐 쓴다.',
     color: '#2f5d9e',
+    later: { 2: { grade: '졸업 · 대학생 OB' }, 3: { grade: '졸업 · 대학생 OB' } },
   },
   shizuku: {
     id: 'shizuku',
@@ -51,6 +56,7 @@ export const CAST: Record<MemberId, Member> = {
     role: '명대사·오타쿠 용어 담당',
     bio: '말수 적은 음침 오타쿠. 평소엔 작은 목소리지만 좋아하는 작품 얘기가 나오면 갑자기 빨라진다. 원작 출처 해설 담당.',
     color: '#7357b0',
+    later: { 2: { grade: '3학년 · 부장' }, 3: { grade: '졸업' } },
   },
   ritsu: {
     id: 'ritsu',
@@ -61,6 +67,7 @@ export const CAST: Record<MemberId, Member> = {
     role: '회화·롤플레이 담당',
     bio: '경음부와 애니연을 겸하는 보이시한 베이시스트. 말은 짧고 무뚝뚝하지만 연습 상대는 끝까지 해 준다. 애니송 카피가 특기.',
     color: '#3f4a63',
+    later: { 2: { grade: '3학년' }, 3: { grade: '졸업' } },
   },
   hiyori: {
     id: 'hiyori',
@@ -71,7 +78,42 @@ export const CAST: Record<MemberId, Member> = {
     role: '단어·퀴즈 담당',
     bio: '선배를 깔보고 놀리는 게 낙인 건방진 1학년. 선배가 틀리면 신나서 "ざーこ"를 연발하지만, 맞히면 못 이기는 척 인정한다. 가챠 운이 이상하게 좋다.',
     color: '#e86a9a',
+    later: { 2: { grade: '2학년' }, 3: { grade: '3학년' } },
   },
+  akane: {
+    id: 'akane',
+    name: '天城 アカネ',
+    reading: 'あまぎ あかね',
+    name_ko: '아마기 아카네',
+    grade: '1학년',
+    role: '젊은이 말투 담당',
+    bio: '밝은 갸루인데 정체는 『鋼鉄騎士ガルバード』 원작 OVA를 신봉하는 로봇 애니·프라모델 덕후. 로봇 얘기만 나오면 전문용어로 폭주한다. 반 친구들에겐 비밀.',
+    color: '#e0782b',
+    joinYear: 2,
+    later: { 3: { grade: '2학년' } },
+  },
+  keita: {
+    id: 'keita',
+    name: '土屋 ケイタ',
+    reading: 'つちや けいた',
+    name_ko: '츠치야 케이타',
+    grade: '1학년',
+    role: '맞장구·짧은 대답 담당',
+    bio: '키 190cm의 과묵한 코스플레이어. 집이 양복점이라 재봉이 특기. 평소엔 "…っす"뿐이지만 코스프레를 하면 딴사람처럼 당당해진다. 농구부가 계속 스카우트하러 온다.',
+    color: '#3f7d5c',
+    joinYear: 2,
+    later: { 3: { grade: '2학년' } },
+  },
+};
+
+/** Members in the club during a story year (new members appear from year 2). */
+export const membersFor = (year: number): MemberId[] =>
+  (Object.keys(CAST) as MemberId[]).filter((id) => (CAST[id].joinYear ?? 1) <= year);
+
+export const gradeOf = (id: MemberId, year: number): string => {
+  const m = CAST[id];
+  for (let y = year; y > 1; y--) if (m.later?.[y]) return m.later[y].grade;
+  return m.grade;
 };
 
 /** How each member talks, for Claude to play them in the 대화 tab (Japanese, %name%/%kun% are filled in). */
@@ -86,6 +128,10 @@ export const PERSONA: Record<MemberId, string> = {
     '2年生の女子。ボーイッシュでクールなベーシスト、軽音部と兼部。口数が少なく、男っぽい口調(一人称「あたし」、「〜じゃん」「〜だろ」)。ぶっきらぼうだが面倒見はいい。相手を「%name%」と呼ぶ。',
   hiyori:
     '1年生の女子で、主人公と同じクラス。主人公が1歳年上なのをネタに、わざと「センパイ」と呼んでからかう生意気キャラ。口癖は「ざーこ♪」「ぷぷっ」。ガチャ運が異常にいい。実は声優志望で努力家だが、それは隠している。からかいは軽いノリで、健全な範囲。',
+  akane:
+    '1年生の女子。見た目は明るいギャルで、ギャル語(「マジ」「ガチ」「ウケる」「〜じゃね？」「〜だし」)、一人称「ウチ」。実はロボットアニメ(特に80年代OVA『鋼鉄騎士ガルバード』)とプラモデルのガチオタクで、ロボの話になると専門用語で早口になる。クラスのギャル友達にはオタクなのを隠している。相手を「%name%パイセン」と呼ぶ。',
+  keita:
+    '1年生の男子。身長190cmで無口、返事はとても短い(「…っす」「うっす」)。一人称「自分」。実家が仕立て屋で裁縫が得意なコスプレイヤー。人の視線が苦手だが、衣装の話になると少しだけ饒舌になる。相手を「%name%先輩」と呼ぶ。',
 };
 
 const L = (jp: string, ko: string): Line => ({ jp, ko });

@@ -197,4 +197,16 @@ export function isUnlocked(list: EpisodeMeta[], id: string, p: Progress = getPro
   return i <= 0 || !!st(p).done[list[i - 1].id] || !!st(p).done[id];
 }
 
+/** The player's school year in the story: the latest year with a finished episode, +1 once its last episode (no. 36) is done. */
+export function storyYear(p: Progress = getProgress()): number {
+  let year = 1;
+  for (const id of Object.keys(st(p).done)) {
+    const m = /^y(\d)-(\d+)$/.exec(id);
+    if (!m) continue;
+    const y = Number(m[1]) + (Number(m[2]) >= 36 ? 1 : 0);
+    if (y > year) year = y;
+  }
+  return Math.min(year, 3);
+}
+
 export const MONTH_KO = ['', '1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];

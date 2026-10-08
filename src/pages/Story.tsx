@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Avatar } from '../components/Avatar';
 import { JP } from '../components/JP';
 import { bgUrl } from '../components/Stage';
-import { CAST, type MemberId } from '../lib/cast';
+import { CAST, membersFor } from '../lib/cast';
 import type { Content } from '../lib/content';
-import { type EpisodeMeta, MONTH_KO, affinity, isUnlocked, nextEpisode, playerName, setPlayer, useStoryIndex } from '../lib/story';
+import { type EpisodeMeta, MONTH_KO, affinity, isUnlocked, nextEpisode, playerName, setPlayer, storyYear, useStoryIndex } from '../lib/story';
 import { useProgress } from '../lib/store';
 
 const MONTH_ORDER = [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3];
@@ -104,7 +104,7 @@ export function Story({ content, play }: { content: Content; play: (id: string) 
 
           <div className="h2">친밀도</div>
           <div className="aff-row">
-            {(Object.keys(CAST) as MemberId[]).map((id) => {
+            {membersFor(storyYear(p)).map((id) => {
               const n = aff[id] ?? 0;
               return (
                 <div key={id} className="aff-item" title={`${CAST[id].name_ko} 친밀도 ${n}`}>
