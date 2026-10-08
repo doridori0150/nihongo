@@ -1,6 +1,6 @@
 // Bundle content-src/** into public/data/*.json with stable IDs.
 // Invalid items are skipped with a warning so one typo never breaks the deploy.
-import { mkdirSync, readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync, existsSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseJText } from './jtext.mjs';
@@ -173,6 +173,9 @@ storyIndex.sort((a, b) => a.year - b.year || a.no - b.no);
 
 mkdirSync(OUT, { recursive: true });
 mkdirSync(join(OUT, 'story'), { recursive: true });
+// drop episodes that were removed or renamed (file by file: removing the watched folder crashes Node on Windows)
+const keepStory = new Set(storyFiles.map(({ id }) => `${id}.json`));
+for (const f of readdirSync(join(OUT, 'story'))) if (!keepStory.has(f)) unlinkSync(join(OUT, 'story', f));
 for (const { id, data } of storyFiles) writeFileSync(join(OUT, 'story', `${id}.json`), JSON.stringify(data));
 const write = (name, value) => writeFileSync(join(OUT, `${name}.json`), JSON.stringify(value));
 write('vocab', words);
