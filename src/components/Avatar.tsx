@@ -62,6 +62,23 @@ function Hair({ id }: { id: MemberId }) {
           <path d="M30 86 Q50 96 70 86" stroke="#e8c54a" strokeWidth="3.5" fill="none" />
         </>
       );
+    case 'mei':
+      return (
+        <>
+          <path d="M22 70 C14 44 26 20 50 20 C74 20 86 44 78 70 L72 64 C74 52 72 46 70 44 L30 44 C28 46 26 52 28 64 Z" fill="#2a1d1a" />
+          <path d="M26 52 C26 32 38 22 52 22 C66 23 76 34 74 50 L26 50 Z" fill="#33231f" />
+          <circle cx="24" cy="66" r="7" fill="#2a1d1a" />
+          <circle cx="76" cy="66" r="7" fill="#2a1d1a" />
+          <rect x="62" y="28" width="9" height="4" rx="2" fill="#d94f6b" />
+        </>
+      );
+    case 'sota':
+      return (
+        <>
+          <path d="M24 54 C20 30 36 17 52 18 C70 19 82 32 76 54 C72 42 64 36 54 36 C46 40 34 44 24 54 Z" fill="#6b4a2e" />
+          <path d="M40 22 L46 12 L50 22 Z M54 21 L62 11 L62 23 Z" fill="#6b4a2e" />
+        </>
+      );
     case 'shizuku':
       return (
         <>
@@ -102,6 +119,8 @@ function Face({ id }: { id: MemberId }) {
       {id === 'minato' && <path d="M45 68 H55" stroke="#5a3a30" strokeWidth="2" strokeLinecap="round" />}
       {id === 'akane' && <path d="M44 67 Q50 72 56 67" stroke="#8a3a2a" strokeWidth="2" fill="none" strokeLinecap="round" />}
       {id === 'keita' && <path d="M46 68 H54" stroke="#4a3a30" strokeWidth="1.8" strokeLinecap="round" />}
+      {id === 'mei' && <path d="M45 67 Q50 71 55 67" stroke="#8a3a3a" strokeWidth="2" fill="none" strokeLinecap="round" />}
+      {id === 'sota' && <path d="M42 66 Q50 75 58 66 Z" fill="#7a2e2e" />}
       {id === 'shizuku' && <path d="M47 68 Q50 69.5 53 68" stroke="#5a3a50" strokeWidth="1.8" fill="none" strokeLinecap="round" />}
     </>
   );

@@ -30,6 +30,9 @@ const BG_TINT: Record<string, string> = {
   ryokan: 'linear-gradient(160deg, #efe3c8, #a8895d)',
   live_house: 'linear-gradient(180deg, #120d1f, #6b2d8f)',
   exam_hall: 'linear-gradient(160deg, #eef1f4, #b7c0c9)',
+  campus: 'linear-gradient(160deg, #e7f3df, #9dbb86)',
+  studio: 'linear-gradient(180deg, #1a1d26, #3d4660)',
+  airport: 'linear-gradient(160deg, #eaf4fb, #a9c8de)',
 };
 
 export function bgUrl(art: Art, key: string): string | null {

@@ -108,6 +108,13 @@ export function StoryPlayer({ ep, content, hasNext, onExit, onNext }: Props) {
         if (branch?.length) stack.current.push({ steps: branch, i: 0 });
         continue;
       }
+      if ('if_top' in s) {
+        const score = s.year ? affinity(undefined, s.year) : aff;
+        const best = s.if_top.reduce((a, m) => ((score[m] ?? 0) > (score[a] ?? 0) ? m : a), s.if_top[0]);
+        const branch = s.branches[best] ?? s.else;
+        if (branch?.length) stack.current.push({ steps: branch, i: 0 });
+        continue;
+      }
       if (stack.current.length === 1) setStoryPos(ep.id, top.i - 1);
       if ('choice' in s) {
         setRevealOpts(false);

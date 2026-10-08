@@ -27,7 +27,9 @@ export type Step =
   | { narr: string; ko: string }
   | { say: string; who?: string; who_ko?: string; face?: Face; jp: string; ko: string }
   | { choice: string; options: ChoiceOption[] }
-  | { if_aff: Record<string, number>; then: Step[]; else?: Step[] };
+  | { if_aff: Record<string, number>; then: Step[]; else?: Step[] }
+  /** Branch for whichever listed member has the highest affinity (ties: earlier in the list); `year` counts only that year's choices. */
+  | { if_top: string[]; year?: number; branches: Record<string, Step[]>; else?: Step[] };
 
 export interface EpisodeMeta {
   id: string;
@@ -129,9 +131,13 @@ export const EMPTY_STORY: StoryProgress = { done: {}, pos: null, choices: {}, sa
 const st = (p: Progress): StoryProgress => ({ ...EMPTY_STORY, ...(p.story ?? {}) });
 
 /** Affinity per member, summed over every choice made (first choice per spot counts). */
-export function affinity(p: Progress = getProgress()): Record<string, number> {
+/** Affinity summed over recorded choices; with `year`, only choices made in that story year. */
+export function affinity(p: Progress = getProgress(), year?: number): Record<string, number> {
   const out: Record<string, number> = {};
-  for (const c of Object.values(st(p).choices)) for (const [m, n] of Object.entries(c.aff)) out[m] = (out[m] ?? 0) + n;
+  for (const [key, c] of Object.entries(st(p).choices)) {
+    if (year && !key.startsWith(`y${year}-`)) continue;
+    for (const [m, n] of Object.entries(c.aff)) out[m] = (out[m] ?? 0) + n;
+  }
   return out;
 }
 

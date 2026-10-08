@@ -112,8 +112,8 @@ function checkQuote(q, where) {
   q.examples.forEach((ex, i) => example(`${where} ex${i}`, ex));
 }
 
-const BGS = ['clubroom', 'clubroom_evening', 'classroom', 'hallway', 'school_gate', 'rooftop', 'station', 'akihabara', 'shopping_street', 'convenience_store', 'beach_inn', 'festival_night', 'comiket', 'shrine_winter', 'apartment', 'kyoto_street', 'osaka_street', 'ryokan', 'live_house', 'exam_hall'];
-const CAST_IDS = ['saeko', 'minato', 'shizuku', 'ritsu', 'hiyori', 'akane', 'keita'];
+const BGS = ['clubroom', 'clubroom_evening', 'classroom', 'hallway', 'school_gate', 'rooftop', 'station', 'akihabara', 'shopping_street', 'convenience_store', 'beach_inn', 'festival_night', 'comiket', 'shrine_winter', 'apartment', 'kyoto_street', 'osaka_street', 'ryokan', 'live_house', 'exam_hall', 'campus', 'studio', 'airport'];
+const CAST_IDS = ['saeko', 'minato', 'shizuku', 'ritsu', 'hiyori', 'akane', 'keita', 'mei', 'sota'];
 const FACES = ['normal', 'happy', 'angry', 'sad', 'surprised', 'smug', 'shy'];
 
 function checkStory(ep, file) {
@@ -131,7 +131,7 @@ function checkStory(ep, file) {
     if (!Array.isArray(steps)) return report(where, `${path}: 배열 필요`);
     steps.forEach((s, i) => {
       const at = `${path}[${i}]`;
-      const kind = ['bg', 'show', 'hide', 'narr', 'say', 'choice', 'if_aff'].filter((k) => k in s);
+      const kind = ['bg', 'show', 'hide', 'narr', 'say', 'choice', 'if_aff', 'if_top'].filter((k) => k in s);
       if (kind.length !== 1) return report(where, `${at}: 명령은 하나만 (${kind.join(',') || '없음'})`);
       const k = kind[0];
       if (k === 'bg' && !BGS.includes(s.bg)) report(where, `${at}: 알 수 없는 배경 ${s.bg}`);
@@ -162,6 +162,18 @@ function checkStory(ep, file) {
       if (k === 'if_aff') {
         for (const m of Object.keys(s.if_aff ?? {})) if (!CAST_IDS.includes(m)) report(where, `${at}: if_aff 의 알 수 없는 캐릭터 ${m}`);
         walk(s.then, `${at}.then`);
+        if (s.else !== undefined) walk(s.else, `${at}.else`);
+      }
+      if (k === 'if_top') {
+        if (!Array.isArray(s.if_top) || s.if_top.length < 2) report(where, `${at}: if_top 은 캐릭터 2명 이상 배열`);
+        if (s.year !== undefined && ![1, 2, 3].includes(s.year)) report(where, `${at}: if_top year 는 1~3`);
+        for (const m of s.if_top ?? []) if (!CAST_IDS.includes(m)) report(where, `${at}: if_top 의 알 수 없는 캐릭터 ${m}`);
+        for (const [m, steps] of Object.entries(s.branches ?? {})) {
+          if (!(s.if_top ?? []).includes(m)) report(where, `${at}: branches.${m} 는 if_top 목록에 없음`);
+          walk(steps, `${at}.branches.${m}`);
+        }
+        const missing = (s.if_top ?? []).filter((m) => !(m in (s.branches ?? {})));
+        if (missing.length && s.else === undefined) report(where, `${at}: branches 가 없는 캐릭터(${missing.join(',')})가 있으면 else 필요`);
         if (s.else !== undefined) walk(s.else, `${at}.else`);
       }
     });

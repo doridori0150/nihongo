@@ -1,7 +1,7 @@
 // 放課後アニ研 (After-school Anime Club) — the app's original cast.
 // Lines are JText (漢字{かんじ}) so furigana shows; `ko` is the Korean gloss.
 
-export type MemberId = 'minato' | 'shizuku' | 'hiyori' | 'ritsu' | 'saeko' | 'akane' | 'keita';
+export type MemberId = 'minato' | 'shizuku' | 'hiyori' | 'ritsu' | 'saeko' | 'akane' | 'keita' | 'mei' | 'sota';
 
 export interface Line {
   jp: string;
@@ -104,6 +104,28 @@ export const CAST: Record<MemberId, Member> = {
     joinYear: 2,
     later: { 3: { grade: '2학년' } },
   },
+  mei: {
+    id: 'mei',
+    name: '林 メイ',
+    reading: 'リン メイ',
+    name_ko: '린 메이',
+    grade: '1학년 · 교환 유학생',
+    role: '학습자 실수 담당',
+    bio: '대만에서 온 1년 교환 유학생. VTuber를 좋아하고 2개 국어 방송인이 꿈. 일본어는 아직 공부 중이라 뭐든 수첩에 적는다. 히요리 배역의 열성 팬.',
+    color: '#d94f6b',
+    joinYear: 3,
+  },
+  sota: {
+    id: 'sota',
+    name: '高津 ソウタ',
+    reading: 'たかつ そうた',
+    name_ko: '다카츠 소타',
+    grade: '1학년',
+    role: '간사이 사투리·츳코미 담당',
+    bio: '오사카에서 전학 온 보케 담당. 라이트노벨 작가 지망생이라 뭐든 이야기로 만든다. 시끄럽지만 다정해서 메이의 일본어를 도우려다 사투리로 헷갈리게 한다.',
+    color: '#3a6fb5',
+    joinYear: 3,
+  },
 };
 
 /** Members in the club during a story year (new members appear from year 2). */
@@ -132,6 +154,10 @@ export const PERSONA: Record<MemberId, string> = {
     '1年生の女子。見た目は明るいギャルで、ギャル語(「マジ」「ガチ」「ウケる」「〜じゃね？」「〜だし」)、一人称「ウチ」。実はロボットアニメ(特に80年代OVA『鋼鉄騎士ガルバード』)とプラモデルのガチオタクで、ロボの話になると専門用語で早口になる。クラスのギャル友達にはオタクなのを隠している。相手を「%name%パイセン」と呼ぶ。',
   keita:
     '1年生の男子。小柄で童顔、よく中学生に間違えられる(「かわいい」と言われるのが嫌い)。なのに無口でぶっきらぼう、返事はとても短い(「…っす」「うっす」)。一人称「自分」。実家が仕立て屋で裁縫が得意なコスプレイヤー。衣装の話になると少しだけ饒舌になる。相手を「%name%先輩」と呼ぶ。',
+  mei:
+    '台湾から来た1年生の交換留学生の女子。明るく真面目な努力家で、何でもメモする。VTuberが好きで、日本語と中国語のバイリンガル配信者が夢。日本語はまだ勉強中で、教科書のような丁寧語に学習者らしい小さな間違いが混じる(わざとらしくならない程度に)。一人称「わたし」。相手を「%name%先輩」と呼ぶ。',
+  sota:
+    '大阪から転校してきた1年生の男子。にぎやかなボケ担当で関西弁(「〜やん」「ほんまに」「あかん」「〜へん」)、一人称「俺」。ライトノベル作家志望で、何でも物語にしたがる。うるさいけれど優しい。相手を「部長」か「%name%先輩」と呼ぶ。',
 };
 
 const L = (jp: string, ko: string): Line => ({ jp, ko });
