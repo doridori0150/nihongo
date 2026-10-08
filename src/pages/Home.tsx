@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Avatar, Bubble } from '../components/Avatar';
+import { Avatar, Bubble, Portrait } from '../components/Avatar';
 import { Sheet } from '../components/common';
 import { CAST, CLUB, type MemberId, say } from '../lib/cast';
 import { MEDIUM_GROUP, type MediumGroup } from '../lib/content';
@@ -83,6 +83,7 @@ function ClubBanner({ content }: { content: Content }) {
   const sig = signals(p, content, p.days[d]);
   const allDone = sig[0].light === 'green' && sig[1].light === 'green';
   const seed = diffDays(d, '2026-01-01');
+  const [profile, setProfile] = useState<MemberId | null>(null);
   const s = allDone ? say('allDone', seed) : due > 0 ? say('reviewDue', seed) : say(new Date().getHours() < 11 ? 'greetMorning' : 'greet', seed);
   return (
     <section className="club">
@@ -95,11 +96,34 @@ function ClubBanner({ content }: { content: Content }) {
         </div>
         <div className="club-members">
           {(Object.keys(CAST) as MemberId[]).map((id) => (
-            <Avatar key={id} id={id} size={36} title />
+            <button key={id} className="member-btn" onClick={() => setProfile(id)} aria-label={`${CAST[id].name_ko} 소개`}>
+              <Avatar id={id} size={36} title />
+            </button>
           ))}
         </div>
       </div>
       <Bubble member={s.member} line={s.line} size={52} />
+      {profile && (
+        <Sheet onClose={() => setProfile(null)}>
+          <Portrait id={profile} />
+          <div className="profile-name">
+            {CAST[profile].name} <span className="muted small">{CAST[profile].reading}</span>
+          </div>
+          <div className="small muted" style={{ textAlign: 'center' }}>
+            {CAST[profile].name_ko} · {CAST[profile].grade} · {CAST[profile].role}
+          </div>
+          <div className="note" style={{ marginTop: 12 }}>
+            {CAST[profile].bio}
+          </div>
+          <div className="row" style={{ justifyContent: 'center', gap: 6, marginTop: 14, flexWrap: 'wrap' }}>
+            {(Object.keys(CAST) as MemberId[]).map((id) => (
+              <button key={id} className={`member-btn ${id === profile ? 'on' : ''}`} onClick={() => setProfile(id)} aria-label={CAST[id].name_ko}>
+                <Avatar id={id} size={40} />
+              </button>
+            ))}
+          </div>
+        </Sheet>
+      )}
     </section>
   );
 }

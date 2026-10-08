@@ -115,6 +115,19 @@ export function Avatar({ id, size = 48, title }: { id: MemberId; size?: number; 
   );
 }
 
+/** Full bust-up portrait for the member profile sheet. */
+export function Portrait({ id }: { id: MemberId }) {
+  const art = useContext(ArtContext);
+  const m = CAST[id];
+  if (!m) return null;
+  const file = art.find((f) => f.replace(/\.\w+$/, '') === id);
+  return (
+    <div className="portrait" style={{ ['--ring' as string]: m.color }}>
+      {file ? <img src={`${import.meta.env.BASE_URL}characters/${file}`} alt={m.name} /> : <Placeholder m={m} />}
+    </div>
+  );
+}
+
 /** A member saying a line, with the Korean gloss under it. */
 export function Bubble({ member, line, size = 44, children }: { member: Member; line: Line; size?: number; children?: ReactNode }) {
   return (
