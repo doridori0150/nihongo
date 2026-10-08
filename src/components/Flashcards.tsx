@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { say } from '../lib/cast';
-import { type Content, type Item, MEDIUM_LABEL, isGrammar, isPhrase, isQuote, isWord } from '../lib/content';
+import { type Content, type Item, MEDIUM_LABEL, isExpr, isGrammar, isPhrase, isQuote, isWord } from '../lib/content';
 import { kana } from '../lib/jtext';
 import { sfx, speak } from '../lib/speech';
 import { type CardRating, addAccuracy, addXp, rateCards, useProgress } from '../lib/store';
@@ -11,6 +11,13 @@ import { JP, Speak, WordRuby } from './JP';
 function Front({ it }: { it: Item }) {
   if (isWord(it)) return <div className="fc-word">{it.word}</div>;
   if (isGrammar(it)) return <div className="fc-word grammar">{it.pattern}</div>;
+  if (isExpr(it))
+    return (
+      <div className="fc-sentence">
+        <JP text={it.jp} />
+        <div className="fc-hint">스토리 표현</div>
+      </div>
+    );
   if (isQuote(it))
     return (
       <div className="fc-sentence">
@@ -54,6 +61,15 @@ function Back({ it }: { it: Item }) {
       </>
     );
   }
+  if (isExpr(it))
+    return (
+      <>
+        <div className="fc-meaning">{it.ko}</div>
+        <div className="small" style={{ marginTop: 8 }}>
+          📌 {it.note}
+        </div>
+      </>
+    );
   if (isQuote(it))
     return (
       <>
@@ -82,6 +98,7 @@ function speakText(it: Item): string {
   if (isWord(it)) return it.reading;
   if (isGrammar(it)) return kana(it.examples[0].jp);
   if (isQuote(it)) return kana(it.line);
+  if (isExpr(it)) return kana(it.jp);
   return kana(it.jp);
 }
 

@@ -30,7 +30,7 @@ export function Library({ content }: { content: Content }) {
             ? `${it.pattern} ${it.meaning}`
             : isQuote(it)
               ? `${plain(it.line)} ${it.ko} ${it.work} ${it.work_ko}`
-              : `${plain(it.jp)} ${it.ko} ${it.expression}`;
+              : `${plain(it.jp)} ${it.ko} ${'expression' in it ? it.expression : ''}`;
         return hay.toLowerCase().includes(query);
       })
       .sort((a, b) => (p.items[b.id]?.u ?? 0) - (p.items[a.id]?.u ?? 0));

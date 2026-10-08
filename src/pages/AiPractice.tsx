@@ -18,7 +18,7 @@ import { getApiKey } from '../lib/aiKey';
 import { takeAiRequest } from '../lib/nav';
 import { inClaude } from '../lib/runtime';
 import { CLAUDE_APP_URL } from '../lib/links';
-import { type Content, type Example, type Opinion, type Roleplay, type Situation, isGrammar, isPhrase, isQuote, isWord } from '../lib/content';
+import { type Content, type Example, type Opinion, type Roleplay, type Situation, isExpr, isGrammar, isPhrase, isQuote, isWord } from '../lib/content';
 import { plain } from '../lib/jtext';
 import { today } from '../lib/date';
 import { addAiLog, addXp, getProgress, local, markDone, useProgress } from '../lib/store';
@@ -64,7 +64,7 @@ function composeTask(c: Content): ComposeTask | null {
   const pool = learned.length ? learned : [...(plan?.words ?? []), ...(plan?.grammar ?? [])].map((id) => c.byId.get(id)).filter(Boolean);
   const tasks: ComposeTask[] = [];
   for (const it of pool) {
-    if (!it) continue;
+    if (!it || isExpr(it)) continue;
     const exs: Example[] = isPhrase(it) ? [{ jp: it.jp, ko: it.ko, src: it.src, scene: it.scene }] : it.examples;
     exs.forEach((ex, i) =>
       tasks.push({

@@ -8,7 +8,7 @@ const MEDIA = ['anime', 'manga', 'game', 'drama', 'film', 'novel'];
 const COURSES = ['otaku'];
 
 const [, , type, ...files] = process.argv;
-if (!['vocab', 'grammar', 'phrases', 'qa', 'quotes'].includes(type) || files.length === 0) {
+if (!['vocab', 'grammar', 'phrases', 'qa', 'quotes', 'story'].includes(type) || files.length === 0) {
   console.error('usage: node scripts/validate-content.mjs <vocab|grammar|phrases|qa|quotes> <file.json>...');
   process.exit(2);
 }
@@ -112,6 +112,71 @@ function checkQuote(q, where) {
   q.examples.forEach((ex, i) => example(`${where} ex${i}`, ex));
 }
 
+const BGS = ['clubroom', 'clubroom_evening', 'classroom', 'hallway', 'school_gate', 'rooftop', 'station', 'akihabara', 'shopping_street', 'convenience_store', 'beach_inn', 'festival_night', 'comiket', 'shrine_winter', 'apartment'];
+const CAST_IDS = ['saeko', 'minato', 'shizuku', 'ritsu', 'hiyori', 'akane', 'keita'];
+const FACES = ['normal', 'happy', 'angry', 'sad', 'surprised', 'smug', 'shy'];
+
+function checkStory(ep, file) {
+  const where = ep?.id ?? file;
+  for (const k of ['id', 'title_ko', 'summary_ko', 'level']) str(where, ep[k], k);
+  for (const k of ['year', 'month', 'no']) if (typeof ep[k] !== 'number') report(where, `${k} 숫자 필요`);
+  jtext(where, ep.title, 'title');
+  if (!Array.isArray(ep.focus) || !ep.focus.length) report(where, 'focus 배열 필요');
+  if (!Array.isArray(ep.terms) || ep.terms.length < 8 || ep.terms.length > 15) report(where, 'terms 8~15개 필요');
+  if (!Array.isArray(ep.script)) return report(where, 'script 배열 필요');
+  if (ep.script.length < 40 || ep.script.length > 90) report(where, `script 단계 수 ${ep.script.length} (40~90)`);
+  const texts = [];
+  let choices = 0;
+  const walk = (steps, path) => {
+    if (!Array.isArray(steps)) return report(where, `${path}: 배열 필요`);
+    steps.forEach((s, i) => {
+      const at = `${path}[${i}]`;
+      const kind = ['bg', 'show', 'hide', 'narr', 'say', 'choice', 'if_aff'].filter((k) => k in s);
+      if (kind.length !== 1) return report(where, `${at}: 명령은 하나만 (${kind.join(',') || '없음'})`);
+      const k = kind[0];
+      if (k === 'bg' && !BGS.includes(s.bg)) report(where, `${at}: 알 수 없는 배경 ${s.bg}`);
+      if ((k === 'show' || k === 'hide') && !CAST_IDS.includes(s[k])) report(where, `${at}: 알 수 없는 캐릭터 ${s[k]}`);
+      if (s.face !== undefined && !FACES.includes(s.face)) report(where, `${at}: 알 수 없는 표정 ${s.face}`);
+      if (k === 'narr' || k === 'say') {
+        const p = jtext(where, k === 'narr' ? s.narr : s.jp, `${at} jp`, { minChunks: 1, maxChunks: 20 });
+        if (p) texts.push(p.plain);
+        str(where, s.ko, `${at} ko`);
+        if (k === 'say' && !['me', 'npc', ...CAST_IDS].includes(s.say)) report(where, `${at}: 알 수 없는 화자 ${s.say}`);
+        if (k === 'say' && s.say === 'npc') str(where, s.who, `${at} who`);
+      }
+      if (k === 'choice') {
+        choices++;
+        str(where, s.choice, `${at} choice`);
+        if (!Array.isArray(s.options) || s.options.length !== 2) return report(where, `${at}: options 2개 필요`);
+        if (!s.options.some((o) => o.ok === true)) report(where, `${at}: ok:true 옵션 필요`);
+        s.options.forEach((o, j) => {
+          const p = jtext(where, o.jp, `${at}.options[${j}] jp`, { minChunks: 1, maxChunks: 20 });
+          if (p) texts.push(p.plain);
+          str(where, o.ko, `${at}.options[${j}] ko`);
+          if (typeof o.ok !== 'boolean') report(where, `${at}.options[${j}]: ok boolean 필요`);
+          if (o.ok === false) str(where, o.tip, `${at}.options[${j}] tip`);
+          for (const m of Object.keys(o.aff ?? {})) if (!CAST_IDS.includes(m)) report(where, `${at}: aff 의 알 수 없는 캐릭터 ${m}`);
+          walk(o.then, `${at}.options[${j}].then`);
+        });
+      }
+      if (k === 'if_aff') {
+        for (const m of Object.keys(s.if_aff ?? {})) if (!CAST_IDS.includes(m)) report(where, `${at}: if_aff 의 알 수 없는 캐릭터 ${m}`);
+        walk(s.then, `${at}.then`);
+        if (s.else !== undefined) walk(s.else, `${at}.else`);
+      }
+    });
+  };
+  walk(ep.script, 'script');
+  if (choices < 2 || choices > 4) report(where, `선택지 ${choices}개 (2~4)`);
+  const all = texts.join('\n');
+  (ep.terms ?? []).forEach((t, i) => {
+    const p = jtext(where, t.jp, `terms[${i}] jp`, { minChunks: 1, maxChunks: 12 });
+    str(where, t.ko, `terms[${i}] ko`);
+    str(where, t.note, `terms[${i}] note`);
+    if (p && !all.includes(p.plain)) report(where, `terms[${i}] 「${p.plain}」가 대본에 등장하지 않음`);
+  });
+}
+
 function checkQA(qa, file) {
   for (const key of ['situations', 'opinions', 'roleplays'])
     if (!Array.isArray(qa[key])) report(file, `${key} 배열 필요`);
@@ -146,6 +211,11 @@ for (const file of files) {
   }
   if (type === 'qa') {
     checkQA(data, file);
+    continue;
+  }
+  if (type === 'story') {
+    itemCount++;
+    checkStory(data, file);
     continue;
   }
   if (!Array.isArray(data)) {

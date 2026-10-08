@@ -1,4 +1,4 @@
-import type { Content, Item, Level } from './content';
+import type { Content, Level } from './content';
 import { diffDays, today } from './date';
 import { type DayPlan, type Progress, dueItems, recentAccuracy } from './store';
 
@@ -22,7 +22,7 @@ export interface LevelProgress {
 }
 
 export function levelProgress(p: Progress, c: Content): LevelProgress[] {
-  const all: Item[] = [...c.words, ...c.grammar, ...c.phrases];
+  const all = [...c.words, ...c.grammar, ...c.phrases];
   return (['N3', 'N2', 'N1'] as const)
     .map((level) => {
       const pool = all.filter((it) => it.level === level);

@@ -49,6 +49,71 @@ export function JP({ text, highlight, className = '' }: { text: string; highligh
   );
 }
 
+interface Segment {
+  toks: Token[];
+  term: number | null;
+}
+
+/** Split tokens so each plain-text range becomes its own segment (ruby kept on tokens that stay whole). */
+function splitByRanges(toks: Token[], ranges: { start: number; end: number; term: number }[]): Segment[] {
+  const termAt = (p: number) => ranges.find((r) => p >= r.start && p < r.end)?.term ?? null;
+  const out: Segment[] = [];
+  let cur: Segment = { toks: [], term: null };
+  let pos = 0;
+  for (const tok of toks) {
+    const len = tok.t.length;
+    let a = 0;
+    while (a < len) {
+      const term = termAt(pos + a);
+      let b = a + 1;
+      while (b < len && termAt(pos + b) === term) b++;
+      const piece = a === 0 && b === len ? tok : { t: tok.t.slice(a, b) };
+      if (cur.term !== term) {
+        if (cur.toks.length) out.push(cur);
+        cur = { toks: [], term };
+      }
+      cur.toks.push(piece);
+      a = b;
+    }
+    pos += len;
+  }
+  if (cur.toks.length) out.push(cur);
+  return out;
+}
+
+/** JText with several study terms highlighted; tapping one calls onTerm with its index. */
+export function JPTerms({ text, terms, onTerm, className = '' }: { text: string; terms: string[]; onTerm: (i: number) => void; className?: string }) {
+  const toks = parseChunks(text).flat();
+  const full = toks.map((t) => t.t).join('');
+  const ranges: { start: number; end: number; term: number }[] = [];
+  terms.forEach((t, term) => {
+    if (!t) return;
+    const start = full.indexOf(t);
+    if (start < 0 || ranges.some((r) => start < r.end && start + t.length > r.start)) return;
+    ranges.push({ start, end: start + t.length, term });
+  });
+  return (
+    <span className={`jp ${className}`}>
+      {splitByRanges(toks, ranges).map((seg, i) =>
+        seg.term === null ? (
+          <Tokens key={i} toks={seg.toks} />
+        ) : (
+          <button
+            key={i}
+            className="term"
+            onClick={(e) => {
+              e.stopPropagation();
+              onTerm(seg.term!);
+            }}
+          >
+            <Tokens toks={seg.toks} />
+          </button>
+        ),
+      )}
+    </span>
+  );
+}
+
 /** Headword with its full reading over the whole word (works for okurigana words too). */
 export function WordRuby({ word, reading }: { word: string; reading?: string }) {
   if (!reading || reading === word) return <>{word}</>;

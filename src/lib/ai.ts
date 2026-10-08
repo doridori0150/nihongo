@@ -302,3 +302,60 @@ ${EVAL_FORMAT}`, 'default', false));
   const { data } = await call(RoleplayEvalSchema, TEACHER, [{ role: 'user', content: prompt }], 'medium');
   return clampScore(data);
 }
+
+// ───────── club-room chat (대화 tab) ─────────
+
+const ChatSchema = z.object({
+  reply: z.string().describe('キャラクターとしての返事(ふりがなJText形式、1〜3文)'),
+  reply_ko: z.string().describe('replyの韓国語訳'),
+  face: z.enum(['normal', 'happy', 'angry', 'sad', 'surprised', 'smug', 'shy']).describe('今の表情'),
+  correction: TurnSchema.shape.correction,
+  choices: z
+    .array(z.object({ jp: z.string().describe('学習者が次に言えそうな自然な返事(ふりがなJText形式、短く)'), ko: z.string() }))
+    .describe('学習者のための返事の候補を2つ。方向性の違う自然な返事にする'),
+});
+export type ChatReply = z.infer<typeof ChatSchema>;
+
+const LooseChat = ChatSchema.extend({
+  reply_ko: z.string().catch(''),
+  face: ChatSchema.shape.face.catch('normal'),
+  correction: TurnSchema.shape.correction.catch({ needed: false, fixed: '', explain: '' }),
+  choices: ChatSchema.shape.choices.catch([]),
+});
+
+const CHAT_FORMAT = `毎回、次のJSONオブジェクトだけを返す:
+{"reply": "返事(JText、1〜3文)", "reply_ko": "韓国語訳", "face": "normal"|"happy"|"angry"|"sad"|"surprised"|"smug"|"shy",
+ "correction": {"needed": true|false, "fixed": "直した学習者の発言(JText)か空文字", "explain": "韓国語の短い説明か空文字"},
+ "choices": [{"jp": "学習者の返事候補(JText)", "ko": "韓国語"}, {"jp": "...", "ko": "..."}]}`;
+
+export interface ChatPersona {
+  name: string;
+  profile: string;
+}
+
+function chatSystem(persona: ChatPersona, player: string) {
+  return `あなたは学園ものビジュアルノベル『放課後アニ研』のキャラクター「${persona.name}」です。
+${persona.profile}
+場面: 放課後のアニメ研究会の部室(305号室)。話し相手は韓国から来た留学生の部員「${player}」(日本語学習中、JLPT N3〜N2)。
+ルール:
+- キャラクターの口調を必ず守り、自然な話し言葉で1〜3文。難しすぎる言葉は避けるが、子ども扱いはしない。
+- 雑談を続けるために、ときどき質問を返す。アニメ・学校生活・日常の話題。
+- 学習者の発言に誤りや不自然さがあれば correction に記録する(会話の中では指摘しない)。
+- choices には学習者が次に言えそうな自然な返事を2つ(短く、方向性を変えて)。
+- 健全な内容のみ。
+- ${JTEXT_RULE}`;
+}
+
+export async function clubChat(persona: ChatPersona, player: string, history: ChatTurn[], topic: string): Promise<{ reply: ChatReply; raw: Anthropic.Beta.BetaContentBlock[]; meta: string }> {
+  const opener = `(放課後、${player}が部室に入ってきた。あなたから話しかけて会話を始めてください。話題のきっかけ: ${topic})`;
+  if (inClaude) {
+    const turns: { role: 'user' | 'assistant'; content: string }[] = [{ role: 'user', content: `${chatSystem(persona, player)}\n${CHAT_FORMAT}\n\n${opener}` }];
+    for (const h of history) turns.push(h.role === 'user' ? { role: 'user', content: h.text } : { role: 'assistant', content: h.meta ?? JSON.stringify({ reply: h.text }) });
+    const reply = await sampleJson(LooseChat, turns, 'quick', false);
+    return { reply, raw: [], meta: JSON.stringify(reply) };
+  }
+  const messages: Anthropic.Beta.BetaMessageParam[] = [{ role: 'user', content: opener }];
+  for (const h of history) messages.push(h.role === 'user' ? { role: 'user', content: h.text } : { role: 'assistant', content: h.raw ?? h.text });
+  const { data, content } = await call(ChatSchema, chatSystem(persona, player), messages, 'low');
+  return { reply: data, raw: content, meta: JSON.stringify(data) };
+}

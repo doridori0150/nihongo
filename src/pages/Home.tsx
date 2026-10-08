@@ -14,6 +14,8 @@ import { addDays, diffDays, formatKo, today } from '../lib/date';
 import { CHANNELS, dajareOf, langChanSearch, ytSearch } from '../lib/fun';
 import { type Light, type LevelProgress, levelLabel, levelProgress, overall, signals } from '../lib/level';
 import { requestAi } from '../lib/nav';
+import { Backdrop, spriteUrl } from '../components/Stage';
+import { nextEpisode, useStoryIndex } from '../lib/story';
 import { inClaude } from '../lib/runtime';
 import {
   extraWordsSession,
@@ -34,7 +36,24 @@ interface Props {
   go: (route: string) => void;
 }
 
-export function Home({ content, start, go }: Props) {
+/** 부실: the club room scene with the cast, story/talk entry points and today's status. */
+export function Home({ content, start, go, play }: Props & { play: (id: string) => void }) {
+  const p = useProgress();
+  void start;
+  return (
+    <div className={`page home ${p.settings.furigana ? '' : 'furi-off'}`}>
+      <ClubHero content={content} go={go} play={play} />
+      <Dashboard content={content} />
+      <div className="home-grid">
+        <QuotesSection content={content} go={go} />
+        <DajareSection />
+      </div>
+    </div>
+  );
+}
+
+/** Today's lessons (words, grammar, phrases, review, situation) — shown in 자습. */
+export function TodayTasks({ content, start, go }: Props) {
   const p = useProgress();
   const d = today();
   const [open, setOpen] = useState<Item | null>(null);
@@ -49,60 +68,108 @@ export function Home({ content, start, go }: Props) {
   const words = resolve<Word>(plan.words);
   const grammar = resolve<Grammar>(plan.grammar);
   const phrases = resolve<Phrase>(plan.phrases);
-  const situation = content.situations.length ? content.situations[hash(d) % content.situations.length] : null;
+  const situation = todaysSituation(content);
 
   return (
-    <div className={`page home ${p.settings.furigana ? '' : 'furi-off'}`}>
-      <ClubBanner content={content} />
-      <Dashboard content={content} />
+    <>
       <div className="home-grid">
         <WordsSection words={words} done={!!plan.done.words} start={start} content={content} onOpen={setOpen} />
-        <QuotesSection content={content} go={go} />
-        <PhrasesSection phrases={phrases} done={!!plan.done.phrases} start={start} content={content} />
         <GrammarSection grammar={grammar} done={!!plan.done.grammar} start={start} content={content} />
-        {situation && <TalkSection situation={situation} done={!!plan.done.ai} go={go} />}
+        <PhrasesSection phrases={phrases} done={!!plan.done.phrases} start={start} content={content} />
         <ReviewSection content={content} start={start} go={go} />
-        <YouTubeSection grammar={grammar[0]} words={words} situation={situation} />
-        <DajareSection />
+        {situation && <TalkSection situation={situation} done={!!plan.done.ai} go={go} />}
       </div>
       {open && (
         <Sheet onClose={() => setOpen(null)}>
           <ItemCard item={open} />
         </Sheet>
       )}
-    </div>
+    </>
   );
+}
+
+function todaysSituation(content: Content): Situation | null {
+  return content.situations.length ? content.situations[hash(today()) % content.situations.length] : null;
+}
+
+/** YouTube links for today's grammar/words/situation — shown in 도서관. */
+export function TodayYouTube({ content }: { content: Content }) {
+  const p = useProgress();
+  const plan = p.days[today()];
+  const words = (plan?.words ?? []).map((id) => content.byId.get(id)).filter(Boolean) as Word[];
+  const grammar = (plan?.grammar ?? []).map((id) => content.byId.get(id)).filter(Boolean) as Grammar[];
+  return <YouTubeSection grammar={grammar[0]} words={words} situation={todaysSituation(content)} />;
 }
 
 // ───────── club room ─────────
 
-function ClubBanner({ content }: { content: Content }) {
+function ClubHero({ content, go, play }: { content: Content; go: (r: string) => void; play: (id: string) => void }) {
   const p = useProgress();
   const d = today();
+  const list = useStoryIndex();
+  const next = list ? nextEpisode(list, p) : undefined;
   const due = dueItems(p, d).filter((id) => content.byId.has(id)).length;
   const sig = signals(p, content, p.days[d]);
   const allDone = sig[0].light === 'green' && sig[1].light === 'green';
   const seed = diffDays(d, '2026-01-01');
   const [profile, setProfile] = useState<MemberId | null>(null);
   const s = allDone ? say('allDone', seed) : due > 0 ? say('reviewDue', seed) : say(new Date().getHours() < 11 ? 'greetMorning' : 'greet', seed);
+  const keyArt = content.art.key.find((f) => !f.includes('_tall'));
+  const keyTall = content.art.key.find((f) => f.includes('_tall'));
+  const keyBase = `${import.meta.env.BASE_URL}key/`;
+  const members = Object.keys(CAST) as MemberId[];
+
   return (
-    <section className="club">
-      <div className="club-head">
-        <div>
-          <div className="club-name">
-            {CLUB.name} <span className="muted small">{CLUB.ko}</span>
-          </div>
-          <div className="small muted">오늘도 부실에 모였다. 너는 한국에서 온 신입 부원.</div>
-        </div>
-        <div className="club-members">
-          {(Object.keys(CAST) as MemberId[]).map((id) => (
-            <button key={id} className="member-btn" onClick={() => setProfile(id)} aria-label={`${CAST[id].name_ko} 소개`}>
-              <Avatar id={id} size={36} title />
-            </button>
-          ))}
+    <section className="room">
+      <div className={`room-scene ${keyArt ? 'has-key' : ''}`}>
+        {keyArt ? (
+          <picture>
+            {keyTall && <source media="(max-width: 560px)" srcSet={keyBase + keyTall} />}
+            <img className="room-key" src={keyBase + keyArt} alt="부실 305호에 모인 애니연 부원들" />
+          </picture>
+        ) : (
+          <>
+            <Backdrop art={content.art} bg="clubroom" />
+            <div className="room-lineup">
+              {members.map((id) => {
+                const sprite = spriteUrl(content.art, id, id === 'hiyori' ? 'smug' : 'normal');
+                return (
+                  <button key={id} className={`room-member ${sprite ? 'sprite' : ''}`} onClick={() => setProfile(id)} aria-label={`${CAST[id].name_ko} 소개`}>
+                    {sprite ? <img src={sprite} alt={CAST[id].name} /> : <Portrait id={id} />}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+        <div className="room-sign">
+          <span className="room-plate">305</span> {CLUB.name}
         </div>
       </div>
-      <Bubble member={s.member} line={s.line} size={52} />
+      <div className="room-body">
+        <Bubble member={s.member} line={s.line} size={52} />
+        <div className="room-actions">
+          <button className="btn" onClick={() => (next ? play(next.id) : go('story'))}>
+            ▶ {next ? `스토리 ${p.story?.pos?.ep === next.id ? '이어하기' : '다음 화'} · 第${next.no}話` : '메인 스토리'}
+          </button>
+          <button className="btn ghost" onClick={() => go('talk')}>
+            💬 부원과 대화
+          </button>
+          <button className="btn ghost" onClick={() => go('study')}>
+            ✏️ 오늘의 자습
+          </button>
+        </div>
+        <div className="club-members" style={{ marginTop: 12 }}>
+          {members.map((id) => (
+            <button key={id} className="member-btn" onClick={() => setProfile(id)} aria-label={`${CAST[id].name_ko} 소개`}>
+              <Avatar id={id} size={34} title />
+            </button>
+          ))}
+          <span className="small muted" style={{ marginLeft: 10 }}>
+            부원을 누르면 소개가 나와요
+          </span>
+        </div>
+      </div>
       {profile && (
         <Sheet onClose={() => setProfile(null)}>
           <Portrait id={profile} />
@@ -116,7 +183,7 @@ function ClubBanner({ content }: { content: Content }) {
             {CAST[profile].bio}
           </div>
           <div className="row" style={{ justifyContent: 'center', gap: 6, marginTop: 14, flexWrap: 'wrap' }}>
-            {(Object.keys(CAST) as MemberId[]).map((id) => (
+            {members.map((id) => (
               <button key={id} className={`member-btn ${id === profile ? 'on' : ''}`} onClick={() => setProfile(id)} aria-label={CAST[id].name_ko}>
                 <Avatar id={id} size={40} />
               </button>
@@ -440,7 +507,7 @@ function TalkSection({ situation, done, go }: { situation: Situation; done: bool
   const hasKey = inClaude || !!getApiKey();
   const open = (start: Parameters<typeof requestAi>[0]) => {
     requestAi(start);
-    go('ai');
+    go('talk-practice');
   };
   return (
     <Section

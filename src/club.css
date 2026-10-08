@@ -507,3 +507,13 @@
   font-weight: 800;
   margin-top: 12px;
 }
+
+/* long labels must never widen the page on phones */
+.chip {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.page {
+  overflow-x: clip;
+}

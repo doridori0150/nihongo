@@ -124,9 +124,56 @@ for (const { file, data } of readDir('quotes')) {
 
 // ───── character art dropped into public/characters ─────
 const charDir = join(ROOT, 'public', 'characters');
-const characters = existsSync(charDir) ? readdirSync(charDir).filter((f) => /.(png|webp|jpg)$/i.test(f)).sort() : [];
+const IMG = /\.(png|webp|jpg)$/i;
+const listImages = (dir) => (existsSync(join(ROOT, 'public', dir)) ? readdirSync(join(ROOT, 'public', dir)).filter((f) => IMG.test(f)).sort() : []);
+const characters = existsSync(charDir) ? readdirSync(charDir).filter((f) => IMG.test(f)).sort() : [];
+const art = { bg: listImages('bg'), sprites: listImages('sprites'), key: listImages('key') };
+
+// ───── story episodes (content-src/story/y1, y2, …) ─────
+const storyIndex = [];
+const storyFiles = [];
+const expressions = [];
+const seenExpr = new Map();
+const vocabByWord = new Map(words.map((w) => [w.word, w.id]));
+for (const year of ['y1', 'y2', 'y3']) {
+  for (const { file, data: ep } of readDir(`story/${year}`)) {
+    if (!ep?.id || !Array.isArray(ep.script) || !jtextOk(ep.title, `${file} title`)) {
+      warn(`${file}: 회차 형식 오류 (건너뜀)`);
+      continue;
+    }
+    const terms = (ep.terms ?? [])
+      .filter((t) => jtextOk(t.jp, `${file} term`))
+      .map((t) => {
+        const plain = plainOf(t.jp);
+        // a term that is already a vocab headword reuses that card, so progress is shared
+        const id = vocabByWord.get(plain) ?? `x:${hash(plain)}`;
+        if (id.startsWith('x:') && !seenExpr.has(id)) {
+          seenExpr.set(id, true);
+          expressions.push({ id, jp: t.jp, ko: t.ko, note: t.note, ep: ep.id });
+        }
+        return { ...t, id };
+      });
+    storyFiles.push({ id: ep.id, data: { ...ep, terms } });
+    storyIndex.push({
+      id: ep.id,
+      year: ep.year,
+      month: ep.month,
+      no: ep.no,
+      title: ep.title,
+      title_ko: ep.title_ko,
+      summary_ko: ep.summary_ko,
+      level: ep.level,
+      focus: ep.focus,
+      bg: ep.script.find((s) => s.bg)?.bg ?? 'clubroom',
+      terms: terms.length,
+    });
+  }
+}
+storyIndex.sort((a, b) => a.year - b.year || a.no - b.no);
 
 mkdirSync(OUT, { recursive: true });
+mkdirSync(join(OUT, 'story'), { recursive: true });
+for (const { id, data } of storyFiles) writeFileSync(join(OUT, 'story', `${id}.json`), JSON.stringify(data));
 const write = (name, value) => writeFileSync(join(OUT, `${name}.json`), JSON.stringify(value));
 write('vocab', words);
 write('grammar', grammar);
@@ -134,7 +181,11 @@ write('phrases', phrases);
 write('qa', qa);
 write('quotes', quotes);
 write('characters', characters);
+write('art', art);
+write('story-index', storyIndex);
+write('expressions', expressions);
 
 const lv = (xs) => ['N3', 'N2', 'N1'].map((l) => `${l} ${xs.filter((x) => x.level === l).length}`).join(' / ');
 console.log(`content: 단어 ${words.length} (${lv(words)}), 문법 ${grammar.length} (${lv(grammar)}), 문장 ${phrases.length} (${lv(phrases)}), ` +
-  `상황 ${qa.situations.length}, 의견 ${qa.opinions.length}, 롤플레이 ${qa.roleplays.length}, 명대사 ${quotes.length}, 캐릭터 그림 ${characters.length}` + (warnings ? ` — 경고 ${warnings}개` : ''));
+  `상황 ${qa.situations.length}, 의견 ${qa.opinions.length}, 롤플레이 ${qa.roleplays.length}, 명대사 ${quotes.length}, 캐릭터 그림 ${characters.length}, ` +
+  `스토리 ${storyIndex.length}화(표현 ${expressions.length}), 배경 ${art.bg.length}, 스탠딩 ${art.sprites.length}` + (warnings ? ` — 경고 ${warnings}개` : ''));

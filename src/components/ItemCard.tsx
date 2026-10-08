@@ -1,4 +1,4 @@
-import { type Example, type Grammar, type Item, type Phrase, type Quote, type Word, MEDIUM_LABEL, SRC_LABEL, isGrammar, isQuote, isWord } from '../lib/content';
+import { type Example, type Expr, type Grammar, type Item, type Phrase, type Quote, type Word, MEDIUM_LABEL, SRC_LABEL, isExpr, isGrammar, isQuote, isWord } from '../lib/content';
 import { ytSearch } from '../lib/fun';
 import { JP, Speak, WordRuby } from './JP';
 
@@ -151,7 +151,28 @@ export function QuoteCard({ q }: { q: Quote }) {
   );
 }
 
+function ExprCard({ x }: { x: Expr }) {
+  return (
+    <>
+      <div className="chips">
+        <span className="chip">📖 스토리 표현</span>
+      </div>
+      <div className="row quote-line" style={{ alignItems: 'flex-start' }}>
+        <div style={{ flex: 1 }}>
+          <JP text={x.jp} />
+        </div>
+        <Speak jtext={x.jp} />
+      </div>
+      <div className="quote-ko">{x.ko}</div>
+      <div className="note" style={{ marginTop: 12 }}>
+        {x.note}
+      </div>
+    </>
+  );
+}
+
 export function ItemCard({ item }: { item: Item }) {
+  if (isExpr(item)) return <ExprCard x={item} />;
   if (isWord(item)) return <WordCard w={item} />;
   if (isQuote(item)) return <QuoteCard q={item} />;
   if (isGrammar(item)) return <GrammarCard g={item} />;

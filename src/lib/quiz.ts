@@ -1,4 +1,4 @@
-import { type Content, type Example, type Grammar, type Item, type Phrase, type Quote, type Word, isGrammar, isPhrase, isQuote, isWord } from './content';
+import { type Content, type Example, type Expr, type Grammar, type Item, type Phrase, type Quote, type Word, isExpr, isGrammar, isPhrase, isQuote, isWord } from './content';
 import { chunkSources, plain } from './jtext';
 
 export interface Prompt {
@@ -253,6 +253,16 @@ function quoteMeaning(q: Quote, pool: Quote[]): Graded {
   return { kind: 'choice', itemId: q.id, title: '이 명대사의 뜻은?', prompt: { jp: q.line }, ...withAnswer(q.ko, wrong, false) };
 }
 
+function exprMeaning(x: Expr, pool: Expr[]): Graded {
+  const wrong = distinct(
+    pool.filter((y) => y.id !== x.id && y.ep === x.ep).map((y) => y.ko),
+    pool.map((y) => y.ko),
+    3,
+    [x.ko],
+  );
+  return { kind: 'choice', itemId: x.id, title: '이 표현의 뜻은?', prompt: { jp: x.jp }, ...withAnswer(x.ko, wrong, false) };
+}
+
 // ───────── sessions ─────────
 
 /** New-word lesson: introduce 3–4 words, drill them, repeat; finish with sentence building. */
@@ -313,6 +323,7 @@ export function reviewExercise(it: Item, c: Content): Graded {
   if (isPhrase(it)) {
     return sample([() => phraseCloze(it), () => phraseMeaning(it, c.phrases), () => assemble(it.id, it, allExampleSources(c))])();
   }
+  if (isExpr(it)) return exprMeaning(it, c.exprs);
   if (isQuote(it)) {
     const asLine = { jp: it.line, ko: it.ko };
     return sample([

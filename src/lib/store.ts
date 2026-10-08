@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { addDays, today } from './date';
+import { type StoryProgress, mergeStory } from './story';
 
 /** Review intervals in days after a mistake: 1 → 3 → 7 → 14 → 28 → graduated. */
 export const INTERVALS = [1, 3, 7, 14, 28];
@@ -63,6 +64,8 @@ export interface Progress {
   ai: AiLogEntry[];
   /** flashcard deck: items the learner checked to memorize */
   deck: Record<string, DeckRec>;
+  /** visual-novel story progress */
+  story?: StoryProgress;
 }
 
 export interface DeckRec {
@@ -413,6 +416,7 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     settings: (b.settings?.u ?? 0) > (a.settings?.u ?? 0) ? { ...DEFAULT_SETTINGS, ...b.settings } : a.settings,
     ai,
     deck,
+    story: mergeStory(a.story, b.story),
   };
 }
 

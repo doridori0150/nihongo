@@ -7,6 +7,7 @@ import { type Content, type Item, isGrammar, isWord, itemMeaning, itemTitle } fr
 import { type Course, COURSES, EXTRA_COURSES, chapters, findCourse } from '../lib/courses';
 import { diffDays, today } from '../lib/date';
 import { deckQuizSession, type Session } from '../lib/sessions';
+import { TodayTasks } from './Home';
 import { DECK_MASTERED, deckDue, deckIds, setInDeck, useProgress } from '../lib/store';
 
 interface Props {
@@ -93,9 +94,11 @@ function StudyHome({ content, go, start, startCards }: Omit<Props, 'sub'>) {
   const s = say('study', diffDays(today(), '2026-01-01'));
   return (
     <div className="page">
-      <div className="h1">본격 공부</div>
+      <div className="h1">자습</div>
       <Bubble member={s.member} line={s.line} />
-      <div style={{ height: 14 }} />
+      <div className="h2">오늘의 과제</div>
+      <TodayTasks content={content} start={start} go={go} />
+      <div className="h2">암기 카드</div>
       <DeckCard content={content} start={start} startCards={startCards} />
       <div className="h2">코스</div>
       <div className="course-grid">
