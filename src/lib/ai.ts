@@ -346,16 +346,27 @@ ${persona.profile}
 - ${JTEXT_RULE}`;
 }
 
-export async function clubChat(persona: ChatPersona, player: string, history: ChatTurn[], topic: string): Promise<{ reply: ChatReply; raw: Anthropic.Beta.BetaContentBlock[]; meta: string }> {
+/** Added on the last exchange so the character closes the conversation instead of asking more. */
+const CHAT_CLOSING = 'これが最後のやりとり。キャラクターらしく自然に会話を締めくくる(例: 用事を思い出す、下校時間になる)。もう質問はしない。choices は空配列にする。';
+
+export async function clubChat(
+  persona: ChatPersona,
+  player: string,
+  history: ChatTurn[],
+  topic: string,
+  closing = false,
+): Promise<{ reply: ChatReply; raw: Anthropic.Beta.BetaContentBlock[]; meta: string }> {
   const opener = `(放課後、${player}が部室に入ってきた。あなたから話しかけて会話を始めてください。話題のきっかけ: ${topic})`;
   if (inClaude) {
     const turns: { role: 'user' | 'assistant'; content: string }[] = [{ role: 'user', content: `${chatSystem(persona, player)}\n${CHAT_FORMAT}\n\n${opener}` }];
     for (const h of history) turns.push(h.role === 'user' ? { role: 'user', content: h.text } : { role: 'assistant', content: h.meta ?? JSON.stringify({ reply: h.text }) });
+    if (closing) turns[turns.length - 1] = { ...turns[turns.length - 1], content: `${turns[turns.length - 1].content}\n\n(${CHAT_CLOSING})` };
     const reply = await sampleJson(LooseChat, turns, 'quick', false);
     return { reply, raw: [], meta: JSON.stringify(reply) };
   }
   const messages: Anthropic.Beta.BetaMessageParam[] = [{ role: 'user', content: opener }];
   for (const h of history) messages.push(h.role === 'user' ? { role: 'user', content: h.text } : { role: 'assistant', content: h.raw ?? h.text });
-  const { data, content } = await call(ChatSchema, chatSystem(persona, player), messages, 'low');
+  const system = chatSystem(persona, player) + (closing ? `\n- ${CHAT_CLOSING}` : '');
+  const { data, content } = await call(ChatSchema, system, messages, 'low');
   return { reply: data, raw: content, meta: JSON.stringify(data) };
 }

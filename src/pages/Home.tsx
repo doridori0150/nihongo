@@ -1,8 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Avatar, Bubble, Portrait } from '../components/Avatar';
+import { Avatar, Portrait } from '../components/Avatar';
 import { Sheet } from '../components/common';
 import { CAST, CLUB, type MemberId, gradeOf, membersFor, say } from '../lib/cast';
-import { MEDIUM_GROUP, type MediumGroup } from '../lib/content';
 import { plain } from '../lib/jtext';
 import { todaysQuote } from './Quotes';
 import { ItemCard } from '../components/ItemCard';
@@ -14,8 +13,8 @@ import { addDays, diffDays, formatKo, today } from '../lib/date';
 import { CHANNELS, dajareOf, langChanSearch, ytSearch } from '../lib/fun';
 import { type Light, type LevelProgress, levelLabel, levelProgress, overall, signals } from '../lib/level';
 import { requestAi } from '../lib/nav';
-import { Backdrop, spriteUrl } from '../components/Stage';
-import { nextEpisode, storyYear, useStoryIndex } from '../lib/story';
+import { Backdrop } from '../components/Stage';
+import { MONTH_KO, nextEpisode, storyYear, useStoryIndex } from '../lib/story';
 import { inClaude } from '../lib/runtime';
 import {
   extraWordsSession,
@@ -36,20 +35,55 @@ interface Props {
   go: (route: string) => void;
 }
 
-/** 부실: the club room scene with the cast, story/talk entry points and today's status. */
+/** 부실: a title screen over the club room art; entering dims the room and opens the club menu on top. */
 export function Home({ content, start, go, play }: Props & { play: (id: string) => void }) {
   const p = useProgress();
   void start;
+  const [inside, setInside] = useState(wasEntered);
+  const enter = (v: boolean) => {
+    rememberEntered(v);
+    setInside(v);
+  };
+  const keyArt = content.art.key.find((f) => !f.includes('_tall'));
+  const keyTall = content.art.key.find((f) => f.includes('_tall'));
+  const keyBase = `${import.meta.env.BASE_URL}key/`;
   return (
-    <div className={`page home ${p.settings.furigana ? '' : 'furi-off'}`}>
-      <ClubHero content={content} go={go} play={play} />
-      <Dashboard content={content} />
-      <div className="home-grid">
-        <QuotesSection content={content} go={go} />
-        <DajareSection />
+    <div className={`page home room-home ${inside ? 'inside' : 'title'} ${p.settings.furigana ? '' : 'furi-off'}`}>
+      <div className="room-bg" aria-hidden>
+        {keyArt ? (
+          <picture>
+            {keyTall && <source media="(max-width: 560px)" srcSet={keyBase + keyTall} />}
+            <img src={keyBase + keyArt} alt="" />
+          </picture>
+        ) : (
+          <Backdrop art={content.art} bg="clubroom" />
+        )}
       </div>
+      {inside ? (
+        <RoomInside content={content} go={go} play={play} onLeave={() => enter(false)} />
+      ) : (
+        <RoomTitle onEnter={() => enter(true)} art={keyArt && keyBase + keyArt} tall={keyTall && keyBase + keyTall} />
+      )}
     </div>
   );
+}
+
+// Entering is remembered for the browser session; the title shows again on the next visit or via "그림 보기".
+const ENTERED = 'nd.roomEntered';
+function wasEntered(): boolean {
+  try {
+    return sessionStorage.getItem(ENTERED) === '1';
+  } catch {
+    return false;
+  }
+}
+function rememberEntered(v: boolean) {
+  try {
+    if (v) sessionStorage.setItem(ENTERED, '1');
+    else sessionStorage.removeItem(ENTERED);
+  } catch {
+    /* storage blocked: the title just shows again next time */
+  }
 }
 
 /** Today's lessons (words, grammar, phrases, review, situation) — shown in 자습. */
@@ -103,74 +137,161 @@ export function TodayYouTube({ content }: { content: Content }) {
 
 // ───────── club room ─────────
 
-function ClubHero({ content, go, play }: { content: Content; go: (r: string) => void; play: (id: string) => void }) {
+/** The whole club room art (never cropped) with the title and the enter button under it. */
+function RoomTitle({ onEnter, art, tall }: { onEnter: () => void; art?: string; tall?: string }) {
+  return (
+    <div className="room-title" onClick={onEnter}>
+      {art && (
+        <picture className="rt-art">
+          {tall && <source media="(max-width: 560px)" srcSet={tall} />}
+          <img src={art} alt="부실 305호에 모인 애니연 부원들" />
+        </picture>
+      )}
+      <div className="rt-logo">
+        <span className="room-plate">305</span>
+        <h1 className="rt-name">{CLUB.name}</h1>
+        <div className="rt-sub">{CLUB.ko} · にほんご Daily</div>
+      </div>
+      <button
+        className="rt-enter"
+        autoFocus
+        onClick={(e) => {
+          e.stopPropagation();
+          onEnter();
+        }}
+      >
+        ▶ 부실에 들어가기
+      </button>
+      <div className="rt-hint">화면 어디를 눌러도 들어가요</div>
+    </div>
+  );
+}
+
+function RoomInside({ content, go, play, onLeave }: { content: Content; go: (r: string) => void; play: (id: string) => void; onLeave: () => void }) {
   const p = useProgress();
   const d = today();
   const list = useStoryIndex();
   const next = list ? nextEpisode(list, p) : undefined;
   const due = dueItems(p, d).filter((id) => content.byId.has(id)).length;
   const sig = signals(p, content, p.days[d]);
+  const all = overall(sig);
+  const lp = levelProgress(p, content);
+  const st = streak(p);
   const allDone = sig[0].light === 'green' && sig[1].light === 'green';
   const seed = diffDays(d, '2026-01-01');
   const [profile, setProfile] = useState<MemberId | null>(null);
-  const s = allDone ? say('allDone', seed) : due > 0 ? say('reviewDue', seed) : say(new Date().getHours() < 11 ? 'greetMorning' : 'greet', seed);
-  const keyArt = content.art.key.find((f) => !f.includes('_tall'));
-  const keyTall = content.art.key.find((f) => f.includes('_tall'));
-  const keyBase = `${import.meta.env.BASE_URL}key/`;
+  const [dash, setDash] = useState(false);
+  const [djOffset, setDjOffset] = useState(0);
+  const greet = allDone ? say('allDone', seed) : due > 0 ? say('reviewDue', seed) : say(new Date().getHours() < 11 ? 'greetMorning' : 'greet', seed);
   const year = storyYear(p);
   const members = membersFor(year);
+  const quote = todaysQuote(content, 'anime');
+  const dj = dajareOf(seed + djOffset);
+  const resuming = !!next && p.story?.pos?.ep === next.id;
 
   return (
-    <section className="room">
-      <div className={`room-scene ${keyArt ? 'has-key' : ''} ${keyTall ? 'has-tall' : ''}`}>
-        {keyArt ? (
-          <picture>
-            {keyTall && <source media="(max-width: 560px)" srcSet={keyBase + keyTall} />}
-            <img className="room-key" src={keyBase + keyArt} alt="부실 305호에 모인 애니연 부원들" />
-          </picture>
-        ) : (
-          <>
-            <Backdrop art={content.art} bg="clubroom" />
-            <div className="room-lineup">
-              {members.map((id) => {
-                const sprite = spriteUrl(content.art, id, id === 'hiyori' ? 'smug' : 'normal');
-                return (
-                  <button key={id} className={`room-member ${sprite ? 'sprite' : ''}`} onClick={() => setProfile(id)} aria-label={`${CAST[id].name_ko} 소개`}>
-                    {sprite ? <img src={sprite} alt={CAST[id].name} /> : <Portrait id={id} />}
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        )}
-        <div className="room-sign">
+    <div className="room-inside">
+      <div className="ri-top">
+        <div className="ri-sign">
           <span className="room-plate">305</span> {CLUB.name}
         </div>
+        <button className="ri-ghost" onClick={onLeave}>
+          🖼 그림 보기
+        </button>
       </div>
-      <div className="room-body">
-        <Bubble member={s.member} line={s.line} size={52} />
-        <div className="room-actions">
-          <button className="btn" onClick={() => (next ? play(next.id) : go('story'))}>
-            ▶ {next ? `스토리 ${p.story?.pos?.ep === next.id ? '이어하기' : '다음 화'} · 第${next.no}話` : '메인 스토리'}
-          </button>
-          <button className="btn ghost" onClick={() => go('talk')}>
-            💬 부원과 대화
-          </button>
-          <button className="btn ghost" onClick={() => go('study')}>
-            ✏️ 오늘의 자습
-          </button>
+
+      <div className="ri-greet ri-glass">
+        <Avatar id={greet.member.id} size={48} title />
+        <div className="ri-greet-body">
+          <div className="ri-name" style={{ color: greet.member.color }}>
+            {greet.member.name}
+          </div>
+          <div className="ri-line">
+            <JP text={greet.line.jp} />
+          </div>
+          <div className="ri-ko">{greet.line.ko}</div>
         </div>
-        <div className="club-members" style={{ marginTop: 12 }}>
-          {members.map((id) => (
-            <button key={id} className="member-btn" onClick={() => setProfile(id)} aria-label={`${CAST[id].name_ko} 소개`}>
-              <Avatar id={id} size={34} title />
-            </button>
-          ))}
-          <span className="small muted" style={{ marginLeft: 10 }}>
-            부원을 누르면 소개가 나와요
+      </div>
+
+      <button className="ri-status ri-glass" onClick={() => setDash(true)} aria-label="학습 현황 자세히">
+        <TrafficLight light={all.light} />
+        <span className="ri-stat">🔥 {st.days}일</span>
+        <span className="ri-stat">{levelLabel(lp)}</span>
+        <span className="ri-stat">오늘 {sig[0].value}</span>
+        <span className="ri-stat">복습 {sig[1].value}</span>
+        <span className="ri-more">자세히 ›</span>
+      </button>
+
+      <div className="ri-menu">
+        <button className="ri-tile story" onClick={() => (next ? play(next.id) : go('story'))}>
+          <span className="ri-icon">📖</span>
+          <span className="ri-tile-text">
+            <span className="ri-tile-title">{next ? (resuming ? '스토리 이어하기' : '스토리 다음 화') : '메인 스토리'}</span>
+            {next && (
+              <span className="ri-tile-sub">
+                {next.year}학년 {MONTH_KO[next.month]} · 第{next.no}話 <JP text={next.title} />
+              </span>
+            )}
           </span>
+          <span className="ri-go">▶</span>
+        </button>
+        <button className="ri-tile" onClick={() => go('talk')}>
+          <span className="ri-icon">💬</span>
+          <span className="ri-tile-title">대화</span>
+          <span className="ri-tile-sub">부원과 잡담</span>
+        </button>
+        <button className="ri-tile" onClick={() => go('study')}>
+          <span className="ri-icon">✏️</span>
+          <span className="ri-tile-title">자습</span>
+          <span className="ri-tile-sub">
+            오늘 {sig[0].value}
+            {due > 0 ? ` · 복습 ${due}` : ''}
+          </span>
+        </button>
+        <button className="ri-tile" onClick={() => go('library')}>
+          <span className="ri-icon">📚</span>
+          <span className="ri-tile-title">도서관</span>
+          <span className="ri-tile-sub">명대사·단어장</span>
+        </button>
+      </div>
+
+      <div className="ri-members">
+        {members.map((id) => (
+          <button key={id} className="member-btn" onClick={() => setProfile(id)} aria-label={`${CAST[id].name_ko} 소개`}>
+            <Avatar id={id} size={36} title />
+          </button>
+        ))}
+        <span className="ri-hint">부원을 누르면 소개</span>
+      </div>
+
+      <div className="ri-extras">
+        {quote && (
+          <button className="ri-card ri-glass" onClick={() => go('quotes-anime')}>
+            <div className="ri-card-head">🎌 오늘의 명대사</div>
+            <div className="ri-quote jp">{plain(quote.line)}</div>
+            <div className="ri-card-foot">원작 출처 · {quote.work_ko} ›</div>
+          </button>
+        )}
+        <div className="ri-card ri-glass">
+          <div className="ri-card-head">
+            🤣 오늘의 아재개그
+            <button className="ri-ghost small" onClick={() => setDjOffset(djOffset + 1)}>
+              하나 더
+            </button>
+          </div>
+          <div className="row" style={{ gap: 6 }}>
+            <JP text={dj.jp} />
+            <Speak jtext={dj.jp} small />
+          </div>
+          <div className="ri-card-foot">“{dj.ko}”</div>
         </div>
       </div>
+
+      {dash && (
+        <Sheet onClose={() => setDash(false)}>
+          <Dashboard content={content} />
+        </Sheet>
+      )}
       {profile && (
         <Sheet onClose={() => setProfile(null)}>
           <Portrait id={profile} />
@@ -192,7 +313,7 @@ function ClubHero({ content, go, play }: { content: Content; go: (r: string) => 
           </div>
         </Sheet>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -595,69 +716,6 @@ function YouTubeSection({ grammar, words, situation }: { grammar?: Grammar; word
           </a>
         ))}
       </div>
-    </Section>
-  );
-}
-
-function DajareSection() {
-  const base = diffDays(today(), '2026-01-01');
-  const [offset, setOffset] = useState(0);
-  const dj = dajareOf(base + offset);
-  return (
-    <Section
-      icon="🤣"
-      title="오늘의 아재개그"
-      meta="おやじギャグ · 쓰는 건 자유, 책임은 본인"
-      extra={
-        <button className="btn ghost plain small" onClick={() => setOffset(offset + 1)}>
-          하나 더
-        </button>
-      }
-    >
-      <div className="dajare">
-        <div className="row" style={{ justifyContent: 'center' }}>
-          <JP text={dj.jp} />
-          <Speak jtext={dj.jp} small />
-        </div>
-        <div className="dajare-ko muted">“{dj.ko}”</div>
-      </div>
-      <div className="note dajare-explain">💡 {dj.explain}</div>
-      <div className="risk">⚠️ {dj.risk}</div>
-    </Section>
-  );
-}
-
-function QuotesSection({ content, go }: { content: Content; go: Props['go'] }) {
-  const groups = Object.keys(MEDIUM_GROUP) as MediumGroup[];
-  return (
-    <Section icon="🎌" host="shizuku" title="오늘의 명대사" meta="애니·드라마·소설 원작 대사로 배우는 일본어" className="span-2">
-      {content.quotes.length === 0 ? (
-        <div className="small muted">명대사를 준비 중이에요.</div>
-      ) : (
-        <div className="quote-tiles">
-          {groups.map((g) => {
-            const q = todaysQuote(content, g);
-            return (
-              <button key={g} className="quote-tile" onClick={() => go(`quotes-${g}`)}>
-                <div className="qt-cat">
-                  {MEDIUM_GROUP[g].icon} {MEDIUM_GROUP[g].label}
-                </div>
-                {q ? (
-                  <>
-                    <div className="qt-line jp">{plain(q.line)}</div>
-                    <div className="qt-src">
-                      원작 출처 · <b>{q.work_ko}</b>
-                    </div>
-                  </>
-                ) : (
-                  <div className="qt-src">준비 중</div>
-                )}
-                <div className="qt-more">더 보기 →</div>
-              </button>
-            );
-          })}
-        </div>
-      )}
     </Section>
   );
 }

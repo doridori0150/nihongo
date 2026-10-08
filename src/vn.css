@@ -689,3 +689,390 @@
     font-size: 12px;
   }
 }
+
+/* ───────── 부실 home: title screen → dimmed room with the club menu ───────── */
+.room-home {
+  position: relative;
+}
+.room-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: #1b1d27;
+  overflow: hidden;
+}
+.room-bg picture,
+.room-bg img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.room-bg img {
+  object-fit: cover;
+  object-position: center 35%;
+  transition:
+    filter 0.6s ease,
+    transform 0.6s ease;
+}
+.room-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(10, 12, 20, 0.35), transparent 22%, transparent 55%, rgba(10, 12, 20, 0.82));
+  transition: background 0.6s ease;
+}
+/* on the title the full art sits in the page; this layer is only a blurred fill around it */
+.room-home.title .room-bg img {
+  filter: brightness(0.5) saturate(0.9) blur(18px);
+  transform: scale(1.15);
+}
+.room-home.inside .room-bg img {
+  filter: brightness(0.45) saturate(0.85) blur(3px);
+  transform: scale(1.05);
+}
+.room-home.inside .room-bg::after {
+  background: rgba(10, 12, 20, 0.35);
+}
+.room-home > :not(.room-bg) {
+  position: relative;
+  z-index: 1;
+}
+
+/* title */
+.room-title {
+  height: calc(100dvh - 170px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-bottom: 2vh;
+  text-align: center;
+  color: #fff;
+  cursor: pointer;
+  user-select: none;
+}
+.rt-art {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+.rt-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.45));
+}
+.rt-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+}
+.rt-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(34px, 9vw, 56px);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+}
+.rt-sub {
+  font-size: 14px;
+  opacity: 0.9;
+}
+.rt-enter {
+  margin-top: 6px;
+  padding: 14px 30px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(232, 106, 154, 0.92), rgba(115, 87, 176, 0.92));
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  animation: rt-pulse 2.4s ease-in-out infinite;
+}
+.rt-enter:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}
+.rt-hint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.78);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+}
+@keyframes rt-pulse {
+  50% {
+    box-shadow:
+      0 8px 28px rgba(0, 0, 0, 0.35),
+      0 0 0 8px rgba(232, 106, 154, 0.18);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rt-enter {
+    animation: none;
+  }
+  .room-bg img,
+  .room-bg::after {
+    transition: none;
+  }
+}
+
+/* inside */
+.room-inside {
+  max-width: 760px;
+  margin: 0 auto;
+  display: grid;
+  gap: 12px;
+  color: #f4f2ee;
+  animation: vnin 0.35s ease;
+}
+.room-inside .jp,
+.room-inside rt {
+  color: inherit;
+}
+.ri-glass {
+  background: rgba(18, 20, 30, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.ri-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ri-sign {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+}
+.ri-ghost {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ri-ghost.small {
+  padding: 3px 10px;
+  font-size: 12px;
+}
+.ri-greet {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px;
+}
+.ri-greet-body {
+  min-width: 0;
+}
+.ri-name {
+  font-size: 13px;
+  font-weight: 800;
+  filter: brightness(1.35);
+}
+.ri-line {
+  font-size: 16px;
+  line-height: 1.6;
+}
+.ri-ko {
+  font-size: 13px;
+  color: rgba(244, 242, 238, 0.75);
+}
+.ri-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 10px 14px;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.ri-status .traffic {
+  transform: scale(0.7);
+  margin: -6px -4px;
+}
+.ri-stat {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.ri-more {
+  margin-left: auto;
+  color: rgba(244, 242, 238, 0.7);
+}
+.ri-menu {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.ri-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(18, 20, 30, 0.62);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease;
+}
+.ri-tile:hover {
+  background: rgba(36, 40, 58, 0.72);
+  transform: translateY(-2px);
+}
+.ri-tile.story {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(232, 106, 154, 0.85), rgba(115, 87, 176, 0.85));
+  border-color: rgba(255, 255, 255, 0.35);
+}
+.ri-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+.ri-tile.story .ri-icon {
+  font-size: 30px;
+}
+.ri-tile-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.ri-tile-title {
+  font-size: 15px;
+  font-weight: 800;
+}
+.ri-tile.story .ri-tile-title {
+  font-size: 18px;
+}
+.ri-tile-sub {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.ri-tile.story .ri-tile-sub {
+  font-size: 13px;
+  white-space: normal;
+}
+.ri-tile-sub rt {
+  display: none;
+}
+.ri-go {
+  font-size: 20px;
+}
+.ri-members {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.ri-hint {
+  margin-left: 6px;
+  font-size: 12px;
+  color: rgba(244, 242, 238, 0.7);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+}
+.ri-extras {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+.ri-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px 14px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+button.ri-card {
+  cursor: pointer;
+}
+.ri-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.ri-quote {
+  font-size: 15px;
+  line-height: 1.6;
+}
+.ri-card-foot {
+  font-size: 12px;
+  color: rgba(244, 242, 238, 0.72);
+}
+@media (max-width: 420px) {
+  .ri-tile {
+    padding: 10px;
+  }
+  .ri-tile-title {
+    font-size: 14px;
+  }
+}
+
+/* club chat: exchange counter and wrap-up */
+.vn-count {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.vn-finish {
+  margin-top: 8px;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.45);
+  background: rgba(0, 0, 0, 0.3);
+}
+.vn-eval {
+  max-height: 55dvh;
+  overflow-y: auto;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(18, 20, 30, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #f4f2ee;
+}
