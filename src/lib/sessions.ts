@@ -1,6 +1,6 @@
 import type { LessonResult } from '../components/Lesson';
 import { type Content, type Grammar, type Item, type Phrase, type Word } from './content';
-import { pickNew } from './daily';
+import { pickFresh, pickNew } from './daily';
 import { today } from './date';
 import { type Exercise, buildGrammarLesson, buildPhraseLesson, buildReview, buildWordLesson, shuffle } from './quiz';
 import { addAccuracy, addXp, dueItems, getProgress, markDone, rateCards, recordLearned, recordReviewed, STAGE_GRADUATED, type TaskKey } from './store';
@@ -56,6 +56,43 @@ export function phrasesSession(c: Content): Session | null {
 }
 
 /** Extra new words beyond today's plan. */
+export type WordKind = 'noun' | 'verb' | 'adj' | 'mimetic' | 'adverb' | 'idiom';
+
+/** Kinds of words the learner can pick for a focused set ("오늘의 명사" …). */
+export const WORD_KINDS: { key: WordKind; label: string; icon: string }[] = [
+  { key: 'noun', label: '명사', icon: '📦' },
+  { key: 'verb', label: '동사', icon: '🏃' },
+  { key: 'adj', label: '형용사', icon: '🎨' },
+  { key: 'mimetic', label: '의성어·의태어', icon: '💥' },
+  { key: 'adverb', label: '부사·접속사', icon: '🔗' },
+  { key: 'idiom', label: '관용구·슬랭', icon: '💬' },
+];
+
+/** Kind of a word from its part of speech (the first one listed wins: 명사·する동사 is a noun). */
+export function wordKind(w: Word): WordKind | null {
+  const pos = w.pos ?? '';
+  if (/의성어|의태어/.test(pos)) return 'mimetic';
+  if (/관용구|슬랭|감탄사/.test(pos)) return 'idiom';
+  if (/^(부사|접속사)/.test(pos)) return 'adverb';
+  if (/^(い형용사|な형용사|형용사)/.test(pos)) return 'adj';
+  if (/^(동사|する동사)/.test(pos)) return 'verb';
+  if (/^명사/.test(pos)) return 'noun';
+  return null;
+}
+
+export const KIND_COUNT = 5;
+
+/** Today's random words of one kind; `round` reshuffles. Unlearned words come first. */
+export function kindWords(c: Content, kind: WordKind, round = 0): Word[] {
+  const pool = c.words.filter((w) => wordKind(w) === kind);
+  return resolve<Word>(c, pickFresh(pool, KIND_COUNT, `${today()}:${kind}:${round}`));
+}
+
+export function kindSession(c: Content, kind: WordKind, words: Word[]): Session | null {
+  const label = WORD_KINDS.find((k) => k.key === kind)?.label ?? '단어';
+  return words.length ? learnSession(`오늘의 ${label}`, null, buildWordLesson(words, c)) : null;
+}
+
 export function extraWordsSession(c: Content, count = 5): Session | null {
   const p = getProgress();
   const plan = p.days[today()];

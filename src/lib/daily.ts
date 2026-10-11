@@ -47,6 +47,15 @@ export function pickNew<T extends Item & { level: Level }>(pool: T[], count: num
   return pick(pool, count, exclude, p.settings.level, p.seed);
 }
 
+/** Random picks from a pool for a given salt (e.g. day + kind + reshuffle round), unseen items first. */
+export function pickFresh<T extends Item & { level: Level }>(pool: T[], count: number, salt: string): string[] {
+  const p = getProgress();
+  const seed = hash(salt, p.seed);
+  const fresh = pick(pool, count, new Set(Object.keys(p.items)), p.settings.level, seed);
+  if (fresh.length >= count) return fresh;
+  return [...fresh, ...pick(pool, count - fresh.length, new Set(fresh), p.settings.level, seed)];
+}
+
 /** Return today's plan, creating it (or refreshing a not-yet-started words list) when needed. */
 export function ensureTodayPlan(c: Content): DayPlan {
   const p = getProgress();

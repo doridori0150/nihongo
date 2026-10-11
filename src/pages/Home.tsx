@@ -19,6 +19,11 @@ import { inClaude } from '../lib/runtime';
 import {
   extraWordsSession,
   grammarSession,
+  KIND_COUNT,
+  kindSession,
+  kindWords,
+  type WordKind,
+  WORD_KINDS,
   phrasesSession,
   practiceSession,
   reviewSession,
@@ -463,7 +468,18 @@ function WordsSection({
     local.set('nd.hideMeaning', hide ? '0' : '1');
     setHide(!hide);
   };
+  const [kind, setKind] = useState<WordKind | null>(null);
+  const [round, setRound] = useState(0);
+  const picks = kind ? kindWords(content, kind, round) : [];
+  const kindLabel = WORD_KINDS.find((k) => k.key === kind)?.label;
   const n2 = words.filter((w) => w.level === 'N2').length;
+  const tile = (w: Word) => (
+    <button key={w.id} className="word-tile" onClick={() => onOpen(w)}>
+      <span className="wt-reading">{w.reading !== w.word ? w.reading : ' '}</span>
+      <span className={`wt-word ${w.word.length > 5 ? 'xlong' : w.word.length > 3 ? 'long' : ''}`}>{w.word}</span>
+      <span className={`wt-meaning ${hide ? 'blur' : ''}`}>{w.meaning}</span>
+    </button>
+  );
   return (
     <Section
       icon="📖"
@@ -498,16 +514,46 @@ function WordsSection({
             {hide ? '👀 뜻 보기' : '🙈 뜻 가리고 맞혀 보기'}
           </button>
         </div>
-        <div className="word-grid">
-          {words.map((w) => (
-            <button key={w.id} className="word-tile" onClick={() => onOpen(w)}>
-              <span className="wt-reading">{w.reading !== w.word ? w.reading : ' '}</span>
-              <span className={`wt-word ${w.word.length > 5 ? "xlong" : w.word.length > 3 ? "long" : ""}`}>{w.word}</span>
-              <span className={`wt-meaning ${hide ? 'blur' : ''}`}>{w.meaning}</span>
-            </button>
-          ))}
-        </div>
+        <div className="word-grid">{words.map(tile)}</div>
         </>
+      )}
+      <div className="kind-row" role="group" aria-label="골라서 깊게 학습">
+        <span className="kind-label">골라서 깊게</span>
+        {WORD_KINDS.map((k) => (
+          <button
+            key={k.key}
+            className={`kind-chip ${kind === k.key ? 'on' : ''}`}
+            aria-pressed={kind === k.key}
+            onClick={() => {
+              setKind(kind === k.key ? null : k.key);
+              setRound(0);
+            }}
+          >
+            {k.icon} 오늘의 {k.label}
+          </button>
+        ))}
+      </div>
+      {kind && (
+        <div className="kind-panel">
+          {picks.length === 0 ? (
+            <div className="muted small">이 종류의 단어를 준비 중이에요.</div>
+          ) : (
+            <>
+              <div className="word-grid">{picks.map(tile)}</div>
+              <div className="row" style={{ gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                <button className="btn" onClick={() => start(kindSession(content, kind, picks))}>
+                  ▶ 오늘의 {kindLabel} {picks.length}개 학습
+                </button>
+                <button className="btn ghost" onClick={() => setRound(round + 1)}>
+                  🔀 다른 단어
+                </button>
+              </div>
+              <div className="small muted" style={{ marginTop: 6 }}>
+                아직 안 배운 {kindLabel} 중에서 {KIND_COUNT}개를 뽑아요. 틀린 건 복습 일정에 들어가요.
+              </div>
+            </>
+          )}
+        </div>
       )}
     </Section>
   );

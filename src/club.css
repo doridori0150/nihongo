@@ -517,3 +517,43 @@
 .page {
   overflow-x: clip;
 }
+
+/* 오늘의 단어: pick a kind of word to dig into */
+.kind-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+}
+.kind-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+  margin-right: 2px;
+}
+.kind-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.kind-chip:hover {
+  border-color: var(--primary);
+}
+.kind-chip.on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.kind-panel {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px dashed var(--border);
+}
