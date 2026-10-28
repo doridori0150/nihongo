@@ -3,7 +3,7 @@ import { Avatar, Portrait } from '../components/Avatar';
 import { askConfirm } from '../components/confirm';
 import { JP, Speak } from '../components/JP';
 import { Backdrop, Characters, DialogueBox } from '../components/Stage';
-import { type AiMode, type ChatReply, type ChatTurn, type RoleplayEval, aiMode, clubChat, evaluateRoleplay } from '../lib/ai';
+import { type AiMode, type ChatEval, type ChatReply, type ChatTurn, aiMode, clubChat, evaluateClubChat } from '../lib/ai';
 import { CAST, type MemberId, PERSONA, gradeOf, membersFor } from '../lib/cast';
 import type { Content } from '../lib/content';
 import { kana } from '../lib/jtext';
@@ -97,8 +97,10 @@ function ClubChat({ member, content, onExit }: { member: MemberId; content: Cont
   const [error, setError] = useState('');
   const [showKo, setShowKo] = useState(() => local.get('nd.vnKo') === '1');
   const [log, setLog] = useState(false);
-  const [result, setResult] = useState<RoleplayEval | null>(null);
+  const [result, setResult] = useState<ChatEval | null>(null);
   const [closed, setClosed] = useState(false);
+  const [grading, setGrading] = useState(false);
+  const [gradeError, setGradeError] = useState('');
   const started = useRef(false);
 
   const last = [...turns].reverse().find((t) => t.role === 'assistant');
@@ -108,7 +110,6 @@ function ClubChat({ member, content, onExit }: { member: MemberId; content: Cont
   const ask = async (history: UiTurn[], closing = false) => {
     setBusy(true);
     setError('');
-    let done: UiTurn[] | null = null;
     try {
       const { reply, raw, meta } = await clubChat(persona, player, history, topic, closing);
       const copy = [...history];
@@ -118,15 +119,10 @@ function ClubChat({ member, content, onExit }: { member: MemberId; content: Cont
       setTurns(next);
       setShowKo(local.get('nd.vnKo') === '1');
       if (p.settings.sound) speak(kana(reply.reply));
-      if (closing) done = next;
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setBusy(false);
-    }
-    if (done) {
-      setClosed(true);
-      void finish(done);
     }
   };
 
@@ -143,19 +139,19 @@ function ClubChat({ member, content, onExit }: { member: MemberId; content: Cont
     const history: UiTurn[] = [...turns, { role: 'user', text: t }];
     setTurns(history);
     setInput('');
-    void ask(history, userCount + 1 >= CHAT_TURNS);
+    const closing = userCount + 1 >= CHAT_TURNS;
+    void ask(history, closing);
+    // the evaluation only needs the player's lines, so it starts alongside the closing reply
+    if (closing) void finish(history);
   };
 
   const finish = async (all: UiTurn[] = turns) => {
     if (!all.some((x) => x.role === 'user')) return onExit();
     setClosed(true);
-    setBusy(true);
-    setError('');
+    setGrading(true);
+    setGradeError('');
     try {
-      const ev = await evaluateRoleplay(
-        { title: m.name, character: persona.profile, setting_ko: '방과후 부실에서 잡담', goal_ko: '자연스럽게 대화를 이어가기', opening: all[0]?.text ?? '' },
-        all,
-      );
+      const ev = await evaluateClubChat(m.name, all);
       setResult(ev);
       addAiLog({
         id: `${Date.now()}`,
@@ -170,11 +166,14 @@ function ClubChat({ member, content, onExit }: { member: MemberId; content: Cont
       addXp(5 + Math.round(ev.score / 10));
       markDone('ai');
     } catch (e) {
-      setError((e as Error).message);
+      setGradeError((e as Error).message);
     } finally {
-      setBusy(false);
+      setGrading(false);
     }
   };
+
+  // fixes the character already gave turn by turn — shown the moment the chat ends
+  const fixes = turns.filter((t) => t.role === 'user' && t.correction?.needed);
 
   const exit = () => {
     if (result || !userCount) return onExit();
@@ -221,23 +220,45 @@ function ClubChat({ member, content, onExit }: { member: MemberId; content: Cont
         )}
         {error && <div className="vn-fix bad">⚠️ {error}</div>}
 
-        {result ? (
+        {closed ? (
           <div className="vn-panel vn-eval">
-            <div style={{ fontWeight: 800, fontSize: 18 }}>대화 평가 {result.score}점</div>
-            <div className="small" style={{ margin: '6px 0' }}>
-              {result.summary}
+            {result ? (
+              <>
+                <div style={{ fontWeight: 800, fontSize: 18 }}>대화 평가 {result.score}점</div>
+                <div className="small" style={{ margin: '6px 0' }}>
+                  {result.summary}
+                </div>
+                {result.good.slice(0, 2).map((g, i) => (
+                  <div key={`g${i}`} className="small" style={{ margin: '4px 0' }}>
+                    👍 {g}
+                  </div>
+                ))}
+              </>
+            ) : grading ? (
+              <div style={{ fontWeight: 700 }}>📝 점수와 총평을 쓰는 중…</div>
+            ) : gradeError ? (
+              <div>
+                <div className="small">⚠️ {gradeError}</div>
+                <button className="btn block" style={{ marginTop: 8 }} onClick={() => void finish()}>
+                  📝 평가 다시 받기
+                </button>
+              </div>
+            ) : null}
+            <div className="small" style={{ marginTop: 10 }}>
+              <b>✏️ 이번 대화에서 고친 표현</b>
+              {fixes.length === 0 ? (
+                <div className="muted" style={{ margin: '4px 0' }}>
+                  고칠 곳이 없었어요. 깔끔!
+                </div>
+              ) : (
+                fixes.map((t, i) => (
+                  <div key={`f${i}`} style={{ margin: '4px 0' }}>
+                    <span className="orig">{t.text}</span> → <JP text={t.correction!.fixed} /> — {t.correction!.explain}
+                  </div>
+                ))
+              )}
             </div>
-            {result.good.slice(0, 2).map((g, i) => (
-              <div key={`g${i}`} className="small" style={{ margin: '4px 0' }}>
-                👍 {g}
-              </div>
-            ))}
-            {result.points.slice(0, 3).map((pt, i) => (
-              <div key={i} className="small" style={{ margin: '4px 0' }}>
-                ✏️ <span className="orig">{pt.original}</span> → <span className="jp">{pt.fix.includes('{') ? <JP text={pt.fix} /> : pt.fix}</span> — {pt.explain}
-              </div>
-            ))}
-            {result.expressions.length > 0 && (
+            {result && result.expressions.length > 0 && (
               <div className="small" style={{ marginTop: 8 }}>
                 <b>💡 이럴 때 쓰는 표현</b>
                 {result.expressions.slice(0, 3).map((x, i) => (
@@ -250,16 +271,6 @@ function ClubChat({ member, content, onExit }: { member: MemberId; content: Cont
             <button className="btn block" style={{ marginTop: 10 }} onClick={onExit}>
               부실로 돌아가기
             </button>
-          </div>
-        ) : closed ? (
-          <div className="vn-panel">
-            {busy ? (
-              <div style={{ fontWeight: 700 }}>📝 {m.name_ko}와의 대화를 평가하는 중…</div>
-            ) : (
-              <button className="btn block" onClick={() => void finish()}>
-                📝 평가 다시 받기
-              </button>
-            )}
           </div>
         ) : (
           <div className="vn-panel">

@@ -303,6 +303,42 @@ ${EVAL_FORMAT}`, 'default', false));
   return clampScore(data);
 }
 
+// ───────── club chat evaluation ─────────
+// Light on purpose: each chat reply already carries the fix for the player's last line, so this
+// only adds a score, a short overall comment and a couple of phrases, on the quick tier.
+
+const ChatEvalSchema = z.object({
+  score: z.number().describe('0〜100の整数'),
+  summary: z.string().describe('韓国語での総評(2〜3文、短く)'),
+  good: z.array(z.string()).describe('良かった点(韓国語、1〜2個)'),
+  expressions: z
+    .array(z.object({ jp: z.string().describe('ふりがなJText形式'), ko: z.string() }))
+    .describe('この雑談で使える便利な表現を2個'),
+});
+export type ChatEval = z.infer<typeof ChatEvalSchema>;
+
+const LooseChatEval = ChatEvalSchema.extend({
+  score: z.coerce.number(),
+  good: z.array(z.string()).catch([]),
+  expressions: ChatEvalSchema.shape.expressions.catch([]),
+});
+
+const CHAT_EVAL_FORMAT = `次のJSONオブジェクトだけを短く返す:
+{"score": 0〜100の整数, "summary": "韓国語の総評(2〜3文)", "good": ["良かった点(韓国語、1〜2個)"],
+ "expressions": [{"jp": "便利な表現(JText)", "ko": "韓国語訳"}, {"jp": "...", "ko": "..."}]}`;
+
+export async function evaluateClubChat(partner: string, history: ChatTurn[]): Promise<ChatEval> {
+  const transcript = history
+    .map((h) => (h.role === 'user' ? `学習者: ${h.text}` : `${partner}: ${h.text.replace(/\{[^}]*\}/g, '')}`))
+    .join('\n');
+  const prompt = `放課後の部室での雑談を短く評価してください。個々の言い間違いの訂正は会話中にすでに伝えてあるので、全体の印象(自然さ・会話の続け方・語彙の幅・タメ口と敬語の使い分け)を見る。
+
+${transcript}`;
+  if (inClaude) return clampScore(await sampleJson(LooseChatEval, `${TEACHER}\n\n${prompt}\n\n${CHAT_EVAL_FORMAT}`, 'quick', false));
+  const { data } = await call(ChatEvalSchema, TEACHER, [{ role: 'user', content: prompt }], 'low');
+  return clampScore(data);
+}
+
 // ───────── club-room chat (대화 tab) ─────────
 
 const ChatSchema = z.object({
