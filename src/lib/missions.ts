@@ -2,7 +2,9 @@
 import { getApiKey } from './aiKey';
 import { hash } from './daily';
 import { inClaude } from './runtime';
-import { type Progress, addXp, claimMission, dueItems, evOn, getProgress } from './store';
+import type { Content } from './content';
+import { type Session, reviewSession } from './sessions';
+import { type ExamLevel, type Progress, addXp, claimMission, dueItems, evOn, getProgress } from './store';
 
 export interface Mission {
   id: string;
@@ -89,6 +91,17 @@ export function claim(m: Mission, d: string): number {
     xp += ALL_CLEAR_XP;
   }
   return xp;
+}
+
+/** Open what a mission asks for (exam, review, study, talk, story). */
+export function goToMission(
+  m: Mission,
+  actions: { content: Content; go: (r: string) => void; start: (s: Session | null) => void; startExam: (lv: ExamLevel) => void },
+  level: ExamLevel,
+) {
+  if (m.go === 'exam') return actions.startExam(level);
+  if (m.go === 'review') return actions.start(reviewSession(actions.content));
+  actions.go(m.go === 'cards' ? 'study' : m.go);
 }
 
 /** Missions finished but not yet claimed (for the whiteboard badge). */

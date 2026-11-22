@@ -7,7 +7,7 @@ import { diffDays, today } from '../lib/date';
 import { SECTIONS, EXAM_SIZE } from '../lib/exam';
 import { dajareOf } from '../lib/fun';
 import { plain } from '../lib/jtext';
-import { ALL_CLEAR, ALL_CLEAR_XP, MISSION_XP, type Mission, claim, claimed, missionsFor } from '../lib/missions';
+import { ALL_CLEAR, ALL_CLEAR_XP, MISSION_XP, type Mission, claim, claimed, goToMission, missionsFor } from '../lib/missions';
 import { type SpotKey, SPOTS } from '../lib/scene';
 import { reviewSession, type Session } from '../lib/sessions';
 import { MONTH_KO, nextEpisode, useStoryIndex } from '../lib/story';
@@ -37,35 +37,57 @@ const HOST_LINE: Record<SpotKey, { jp: string; ko: string }> = {
   window: { jp: '今日{きょう}の|名台詞{めいせりふ}…|窓{まど}の|外{そと}みたいに|きれい…', ko: '오늘의 명대사… 창밖처럼 예뻐…' },
 };
 
-export function RoomPanel({ spot, actions, onClose }: { spot: SpotKey; actions: PanelActions; onClose: () => void }) {
+/**
+ * The panel of one piece of furniture.
+ * `inline` sits in the room's right column (desktop); `sheet` slides up over the page (phones).
+ */
+export function RoomPanel({ spot, actions, onClose, mode = 'sheet' }: { spot: SpotKey; actions: PanelActions; onClose: () => void; mode?: 'sheet' | 'inline' }) {
   const s = SPOTS.find((x) => x.key === spot)!;
   useEffect(() => {
     const h = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
   }, [onClose]);
+  const body = (
+    <>
+      <header className="rp-head">
+        {mode === 'inline' ? (
+          <button className="rp-back" onClick={onClose} aria-label="상태로 돌아가기">
+            ←
+          </button>
+        ) : null}
+        <span className="rp-icon">{s.icon}</span>
+        <h2>{s.label}</h2>
+        {mode === 'sheet' && (
+          <button className="icon-btn" onClick={onClose} aria-label="닫기">
+            ✕
+          </button>
+        )}
+      </header>
+      <HostLine key={spot} id={s.host} line={HOST_LINE[spot]} />
+      <div className="rp-body">
+        {spot === 'desk' && <ExamPanel actions={actions} />}
+        {spot === 'whiteboard' && <MissionPanel actions={actions} />}
+        {spot === 'figures' && <AchievementPanel />}
+        {spot === 'bookshelf' && <ShelfPanel actions={actions} />}
+        {spot === 'sofa' && <SofaPanel actions={actions} />}
+        {spot === 'posters' && <StoryPanel actions={actions} />}
+        {spot === 'fridge' && <FridgePanel />}
+        {spot === 'window' && <WindowPanel actions={actions} />}
+      </div>
+    </>
+  );
+  if (mode === 'inline')
+    return (
+      <section className="rp inline" aria-label={s.label}>
+        {body}
+      </section>
+    );
   // portal: the room page is its own stacking context below the top bar
   return createPortal(
     <div className="rp-backdrop" onClick={onClose}>
       <aside className="rp" role="dialog" aria-label={s.label} onClick={(e) => e.stopPropagation()}>
-        <header className="rp-head">
-          <span className="rp-icon">{s.icon}</span>
-          <h2>{s.label}</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="닫기">
-            ✕
-          </button>
-        </header>
-        <HostLine id={s.host} line={HOST_LINE[spot]} />
-        <div className="rp-body">
-          {spot === 'desk' && <ExamPanel actions={actions} />}
-          {spot === 'whiteboard' && <MissionPanel actions={actions} />}
-          {spot === 'figures' && <AchievementPanel />}
-          {spot === 'bookshelf' && <ShelfPanel actions={actions} />}
-          {spot === 'sofa' && <SofaPanel actions={actions} />}
-          {spot === 'posters' && <StoryPanel actions={actions} />}
-          {spot === 'fridge' && <FridgePanel />}
-          {spot === 'window' && <WindowPanel actions={actions} />}
-        </div>
+        {body}
       </aside>
     </div>,
     document.body,
@@ -156,11 +178,7 @@ function MissionPanel({ actions }: { actions: PanelActions }) {
   const d = today();
   const ms = missionsFor(p, d);
   const done = ms.filter((m) => claimed(p, d, m.id)).length;
-  const goTo = (m: Mission) => {
-    if (m.go === 'exam') return actions.startExam(p.settings.level === 'N1' ? 'N1' : 'N2');
-    if (m.go === 'review') return actions.start(reviewSession(actions.content));
-    actions.go(m.go === 'cards' ? 'study' : m.go);
-  };
+  const goTo = (m: Mission) => goToMission(m, actions, p.settings.level === 'N1' ? 'N1' : 'N2');
   return (
     <>
       <Section title="오늘의 미션" right={<span className="rp-count">{done} / {ms.length}</span>}>

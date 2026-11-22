@@ -1,0 +1,72 @@
+﻿[
+    {
+        "file":  "contact_sheet.png",
+        "width":  1536,
+        "height":  1024,
+        "exactSize":  true,
+        "sha256":  "52F719088AA9A12CAB47598DAADBEF2D79E2FC60C8AE7348E1F4DD3FC82D4358"
+    },
+    {
+        "file":  "members_debug_y1.png",
+        "width":  1536,
+        "height":  1024,
+        "exactSize":  true,
+        "sha256":  "B976CA996F8957DAB1D17EC936457C3C7EA53BB130269B367365D98CFD333400"
+    },
+    {
+        "file":  "members_debug_y2.png",
+        "width":  1536,
+        "height":  1024,
+        "exactSize":  true,
+        "sha256":  "15E37E3B5CDFA6D42490CE01A7EE6824607B274129926BB985D82203C557F2F8"
+    },
+    {
+        "file":  "members_debug_y3.png",
+        "width":  1536,
+        "height":  1024,
+        "exactSize":  true,
+        "sha256":  "CC96FC3995F8A538109DC0BEA25E35E67837BAB451FA716D24E474504E7607BD"
+    },
+    {
+        "file":  "room_day_y1.png",
+        "width":  1536,
+        "height":  1024,
+        "exactSize":  true,
+        "sha256":  "B8B74CD7012475D971FD255335B630100FC35742AE2794F257F2BDC9BB01E518"
+    },
+    {
+        "file":  "room_day_y2.png",
+        "width":  1536,
+        "height":  1024,
+        "exactSize":  true,
+        "sha256":  "AABBA524895EBC747CF480A446AF670FA786ACF766D0DD745235F572991510C0"
+    },
+    {
+        "file":  "room_day_y3.png",
+        "width":  1536,
+        "height":  1024,
+        "exactSize":  true,
+        "sha256":  "CC4ABAF0B4E0A9CF887899FB6239BAD34082613FF5AF9EE5FCC5AB8AEE52420B"
+    },
+    {
+        "file":  "room_evening_y1.png",
+        "width":  1536,
+        "height":  1024,
+        "exactSize":  true,
+        "sha256":  "F5FB535ECD46754A0C665A963F4626DC8ED5FBF3D18CF9939842F62A58B46CBE"
+    },
+    {
+        "file":  "room_evening_y2.png",
+        "width":  1536,
+        "height":  1024,
+        "exactSize":  true,
+        "sha256":  "860F0765043B48B228E3884E8D7223C59860D562090172B39489B13793A4BF7F"
+    },
+    {
+        "file":  "room_evening_y3.png",
+        "width":  1536,
+        "height":  1024,
+        "exactSize":  true,
+        "sha256":  "CB544E231B5F5F209F832332A7399A7D2806F68548C9717A3C99F2FDD798EB71"
+    }
+]

@@ -34,4 +34,6 @@ docs/art/key/rejected/
 docs/art/pixel/*.png
 docs/art/pixel/raw/
 docs/art/pixel/generation.json
+docs/art/pixel/v2/
+docs/art/pixel/v3/*.png
 docs/voice/samples.html

@@ -15,72 +15,152 @@
   color: var(--bad-text);
 }
 
-/* pixel-style frame: hard 2-step border, no blur */
-.px-frame,
-.cs-scroll,
-.cs-vn,
-.cs-chip,
-.cs-label {
-  box-shadow:
-    0 0 0 3px var(--px-ink),
-    0 0 0 6px var(--px-cream),
-    0 0 0 9px var(--px-ink);
-}
-
 /* ───────── scene ───────── */
 
+/* the room screen uses the full width: illustration | room | status */
+.page.home.room-home.inside {
+  max-width: 1560px;
+}
 .room-inside.scene-mode {
-  max-width: 1180px;
+  max-width: none;
   gap: 0;
 }
 .club-scene {
   display: grid;
-  gap: 18px;
-  padding: 8px 10px 0;
+  grid-template-columns: 250px minmax(0, 1fr) 320px;
+  gap: 14px;
+  align-items: start;
+  padding: 8px 6px 0;
 }
 
-.cs-hud {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  padding: 0 4px;
-}
-.cs-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
+/* dark pixel card with a stepped frame */
+.px-card {
+  margin: 8px;
+  padding: 12px 14px;
   background: var(--px-panel);
   color: #fff;
-  font-family: var(--font-pixel);
-  font-size: 15px;
-  line-height: 1.4;
-  border: 0;
-  border-radius: 0;
+  box-shadow:
+    0 0 0 3px var(--px-ink),
+    0 0 0 5px rgba(255, 244, 224, 0.85),
+    0 0 0 8px var(--px-ink);
 }
-.cs-chip.btn-chip {
+button.px-card {
+  border: 0;
+  font: inherit;
   cursor: pointer;
 }
-.cs-chip.btn-chip:hover,
-.cs-chip.on {
-  background: #4b3f8a;
+button.px-card:hover {
+  background: #3a3164;
 }
-.cs-dot {
-  background: var(--accent);
-  color: #fff;
-  padding: 0 6px;
-  font-weight: 700;
+.px-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-family: var(--font-pixel);
+  font-size: 15px;
+  font-weight: 400;
+}
+.px-count {
+  margin-left: auto;
+  color: var(--px-gold);
 }
 
+/* left: selected member */
+.cs-left {
+  position: sticky;
+  top: 72px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c, #6b5bd6) 40%, #1c1830), #1c1830 72%);
+}
+.cs-portrait {
+  aspect-ratio: 2 / 3;
+  margin: -12px -12px 0;
+  overflow: hidden;
+}
+.cs-portrait img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  animation: portrait-in 0.3s steps(3);
+}
+@keyframes portrait-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+.cs-nameplate {
+  display: grid;
+  gap: 1px;
+  text-align: left;
+  border: 0;
+  padding: 6px 10px;
+  background: var(--c, #6b5bd6);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--px-ink);
+}
+.cs-nameplate b {
+  font-family: var(--font-pixel);
+  font-size: 18px;
+  font-weight: 400;
+}
+.cs-nameplate small {
+  font-size: 11.5px;
+  opacity: 0.9;
+}
+.cs-role {
+  font-size: 12px;
+  color: #d8d2f0;
+}
+.cs-say {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  border: 0;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.15);
+}
+.cs-say-jp {
+  font-family: var(--font-pixel);
+  font-size: 16px;
+  line-height: 1.9;
+}
+.cs-say-jp rt,
+.cs-bubble rt {
+  font-family: var(--font-jp);
+  font-size: 0.5em;
+}
+.cs-say-ko {
+  font-size: 12px;
+  color: #d8d2f0;
+}
+
+/* center: the room */
+.cs-center {
+  position: relative;
+  min-width: 0;
+}
 .cs-scroll {
   position: relative;
+  margin: 8px;
   overflow-x: auto;
   overflow-y: hidden;
-  margin: 9px;
   background: #1b1730;
   scrollbar-width: thin;
   -webkit-overflow-scrolling: touch;
+  box-shadow:
+    0 0 0 3px var(--px-ink),
+    0 0 0 6px var(--px-cream),
+    0 0 0 9px var(--px-ink);
 }
 .cs-stage {
   position: relative;
@@ -94,22 +174,49 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  image-rendering: pixelated;
   display: block;
+  image-rendering: pixelated;
 }
 .cs-room.fallback {
   background: linear-gradient(160deg, #f3e6cf, #d9c3a0);
 }
+.cs-tools {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 3;
+  display: flex;
+  gap: 8px;
+}
+.cs-tool {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  background: var(--px-panel);
+  color: #fff;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 2px var(--px-ink),
+    0 0 0 4px var(--px-cream);
+}
+.cs-tool:hover,
+.cs-tool.on {
+  background: #4b3f8a;
+}
+.cs-hint {
+  margin: 4px 8px 0;
+  text-align: center;
+  font-size: 12px;
+  color: #d8d2f0;
+}
 
-/* clickable furniture */
+/* furniture hit areas (the icons are the visible part) */
 .cs-spot {
   position: absolute;
   padding: 0;
   border: 0;
   background: transparent;
   cursor: pointer;
-  min-width: 44px;
-  min-height: 44px;
 }
 .cs-spot::before {
   content: '';
@@ -117,101 +224,184 @@
   inset: 0;
   outline: 3px dashed transparent;
   outline-offset: -3px;
-  transition: background 0.12s steps(2);
 }
-.cs-spot:hover::before,
-.cs-spot:focus-visible::before {
+.cs-spot:hover::before {
   outline-color: rgba(255, 244, 224, 0.95);
   background: rgba(255, 240, 200, 0.14);
 }
-.cs-spot:focus-visible {
+.cs-spot.on::before {
+  outline: 3px solid var(--px-gold);
+  background: rgba(255, 209, 102, 0.12);
+}
+
+/* floating icons over everything you can use */
+.cs-pin {
+  position: absolute;
+  z-index: 250;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transform: translate(-50%, -100%);
+  animation: px-float 1.6s steps(2) infinite;
+}
+.cs-pin-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: clamp(30px, 3vw, 44px);
+  height: clamp(30px, 3vw, 44px);
+  font-size: clamp(16px, 1.7vw, 24px);
+  line-height: 1;
+  background: var(--px-cream);
+  box-shadow:
+    0 0 0 3px var(--px-ink),
+    0 4px 0 3px var(--px-ink);
+}
+/* speech-bubble tail */
+.cs-pin-icon::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -13px;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top: 8px solid var(--px-ink);
+}
+.cs-pin.hot .cs-pin-icon {
+  background: var(--px-gold);
+  animation: px-glow 1s steps(2) infinite;
+}
+.cs-pin:hover .cs-pin-icon,
+.cs-pin:focus-visible .cs-pin-icon,
+.cs-pin.on .cs-pin-icon {
+  background: #fff;
+}
+.cs-pin:focus-visible {
   outline: none;
+}
+.cs-pin .cs-badge {
+  position: absolute;
+  top: -12px;
+  right: -14px;
+  min-width: 22px;
+  padding: 0 5px;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  line-height: 22px;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--px-ink);
 }
 .cs-label {
   position: absolute;
   left: 50%;
-  top: 0;
-  transform: translate(-50%, calc(-100% - 10px));
+  top: -10px;
+  transform: translate(-50%, -100%);
   white-space: nowrap;
   padding: 2px 8px;
   background: var(--px-panel);
   color: #fff;
   font-family: var(--font-pixel);
-  font-size: 14px;
+  font-size: 13px;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.1s steps(2);
-  z-index: 200;
+  box-shadow: 0 0 0 2px var(--px-ink);
 }
-/* labels that would leave the room sit inside it instead */
-.spot-figures .cs-label,
-.spot-window .cs-label {
-  left: 8px;
-  transform: translate(0, 10px);
-}
-.spot-bookshelf .cs-label,
-.spot-posters .cs-label {
-  transform: translate(-50%, 10px);
-}
-.spot-sofa .cs-label {
-  left: auto;
-  right: 8px;
-  transform: translate(0, 10px);
-}
-.cs-spot:hover .cs-label,
-.cs-spot:focus-visible .cs-label,
+.cs-pin:hover .cs-label,
+.cs-pin:focus-visible .cs-label,
 .show-labels .cs-label {
   opacity: 1;
-}
-.cs-badge {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  min-width: 24px;
-  padding: 0 6px;
-  background: var(--accent);
-  color: #fff;
-  font-family: var(--font-pixel);
-  font-size: 14px;
-  line-height: 24px;
-  text-align: center;
-  box-shadow:
-    0 0 0 2px var(--px-ink),
-    0 3px 0 2px var(--px-ink);
-  animation: px-bounce 1s steps(2) infinite;
-  z-index: 150;
-}
-.spot-figures .cs-badge {
-  right: auto;
-  left: 6px;
 }
 
 /* chibi members */
 .cs-chibi {
   position: absolute;
   aspect-ratio: 1;
-  transform: translate(-50%, -100%);
   padding: 0;
   border: 0;
   background: none;
   cursor: pointer;
-}
-.cs-chibi img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  image-rendering: pixelated;
-  animation: px-bob 1.4s steps(2) infinite;
-  animation-delay: inherit;
-  pointer-events: none;
-  filter: drop-shadow(0 3px 0 rgba(30, 20, 50, 0.25));
-}
-.cs-chibi:hover img,
-.cs-chibi:focus-visible img {
-  filter: drop-shadow(0 0 0 #fff) drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 -2px 0 #fff);
+  transform: translate(-50%, -100%);
 }
 .cs-chibi:focus-visible {
   outline: none;
+}
+.cs-chibi img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+/* two idle frames: f1 shows on the second half of each beat, f0 on the first */
+.cs-chibi img.f0:not(.single) {
+  animation: px-off 1.3s steps(1) infinite;
+  animation-delay: inherit;
+}
+.cs-chibi img.f1 {
+  opacity: 0;
+  animation: px-on 1.3s steps(1) infinite;
+  animation-delay: inherit;
+}
+.cs-chibi img.single {
+  animation: px-bob 1.4s steps(2) infinite;
+  animation-delay: inherit;
+}
+.cs-chibi:hover img,
+.cs-chibi:focus-visible img {
+  filter: drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 -2px 0 #fff);
+}
+/* sunset light on the members too */
+.evening .cs-chibi img {
+  filter: sepia(0.12) saturate(1.05) brightness(0.97);
+}
+.evening .cs-chibi:hover img {
+  filter: sepia(0.12) saturate(1.05) brightness(0.97) drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 -2px 0 #fff);
+}
+.cs-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: 1%;
+  width: 44%;
+  height: 8%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: rgba(58, 34, 72, 0.32);
+}
+.evening .cs-shadow {
+  background: rgba(70, 28, 52, 0.42);
+}
+.cs-bubble {
+  position: absolute;
+  left: 50%;
+  bottom: 84%;
+  z-index: 5;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: min(300px, 38vw);
+  padding: 4px 9px;
+  background: #fff;
+  color: var(--px-ink);
+  font-family: var(--font-pixel);
+  font-size: clamp(11px, 1.05vw, 15px);
+  line-height: 1.7;
+  text-align: left;
+  box-shadow:
+    0 0 0 2px var(--px-ink),
+    0 3px 0 2px var(--px-ink);
+  animation: px-pop 0.2s steps(2);
+}
+.cs-bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -10px;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top: 7px solid var(--px-ink);
 }
 .cs-name {
   position: absolute;
@@ -225,71 +415,243 @@
   font-size: 12px;
   font-weight: 700;
   opacity: 0;
-  transition: opacity 0.1s steps(2);
 }
 .cs-chibi:hover .cs-name,
 .cs-chibi:focus-visible .cs-name,
 .show-labels .cs-name {
   opacity: 1;
 }
-.cs-chibi.talking::after {
-  content: '💬';
+
+/* members drawn into the room art: invisible hit areas, bubble over the head */
+.cs-drawn {
   position: absolute;
-  left: 62%;
-  top: 4%;
-  font-size: clamp(14px, 2vw, 24px);
-  animation: px-bounce 0.8s steps(2) infinite;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.cs-drawn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  outline: 2px dashed transparent;
+  outline-offset: 2px;
+}
+.cs-drawn:hover::before,
+.cs-drawn:focus-visible::before {
+  outline-color: rgba(255, 255, 255, 0.85);
+}
+.cs-drawn:focus-visible {
+  outline: none;
+}
+.cs-drawn .cs-bubble {
+  bottom: calc(100% + 10px);
+}
+.cs-drawn:hover .cs-name,
+.cs-drawn:focus-visible .cs-name,
+.show-labels .cs-drawn .cs-name {
+  opacity: 1;
 }
 
-/* dialogue box */
-.cs-vn {
-  position: relative;
-  margin: 18px 9px 9px;
-  padding: 18px 18px 14px;
-  background: var(--px-panel);
-  color: #fff;
-  cursor: pointer;
-  min-height: 92px;
+/* right: status */
+.cs-right {
+  position: sticky;
+  top: 72px;
+  min-width: 0;
 }
-.cs-vn-name {
-  position: absolute;
-  left: 14px;
-  top: 0;
-  transform: translateY(-62%);
-  padding: 2px 12px;
-  border: 0;
-  background: var(--c, #6b5bd6);
-  color: #fff;
+.cs-side {
+  display: grid;
+  gap: 6px;
+}
+.cs-clock {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cs-clock-icon {
+  font-size: 26px;
+}
+.cs-clock-body {
+  display: grid;
+}
+.cs-clock-body b {
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.cs-clock-time {
   font-family: var(--font-pixel);
-  font-size: 15px;
-  cursor: pointer;
-  box-shadow:
-    0 0 0 3px var(--px-ink),
-    0 0 0 6px var(--px-cream);
+  font-size: 22px;
 }
-.cs-vn-line {
-  font-family: var(--font-pixel);
-  font-size: 19px;
-  line-height: 1.9;
-}
-.cs-vn-line rt {
-  font-family: var(--font-jp);
-  font-size: 0.5em;
-}
-.cs-vn-ko {
-  margin-top: 2px;
-  font-size: 13px;
+.cs-clock-place {
+  margin-left: auto;
+  font-size: 12px;
   color: #d8d2f0;
 }
-.cs-vn-next {
-  position: absolute;
-  right: 14px;
-  bottom: 8px;
-  font-size: 12px;
+.cs-level {
+  margin-bottom: 8px;
+  font-family: var(--font-pixel);
+  font-size: 22px;
   color: var(--px-gold);
-  animation: px-blink 1s steps(2) infinite;
+}
+.cs-bar {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  margin: 5px 0;
+  font-size: 12px;
+}
+.lv-n3 {
+  --bar: #7fd36b;
+}
+.lv-n2 {
+  --bar: #6fb2ff;
+}
+.lv-n1 {
+  --bar: #c39bff;
+}
+.cs-bar-name {
+  font-family: var(--font-pixel);
+  color: var(--bar);
+}
+.cs-bar-track {
+  display: flex;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+.cs-bar-track i {
+  display: block;
+  height: 100%;
+}
+.cs-bar-track i.solid {
+  background: repeating-linear-gradient(90deg, var(--bar) 0 6px, color-mix(in srgb, var(--bar) 70%, #000) 6px 8px);
+}
+.cs-bar-track i.learning {
+  background: color-mix(in srgb, var(--bar) 40%, transparent);
+}
+.cs-bar-num {
+  font-size: 11px;
+  color: #d8d2f0;
+}
+.cs-stats {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 12.5px;
+}
+.cs-missions {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cs-missions li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.cs-missions li.got {
+  opacity: 0.55;
+}
+.cs-missions li.ready .cs-m-text {
+  color: var(--px-gold);
+}
+.cs-check {
+  font-size: 16px;
+  color: var(--px-gold);
+}
+.cs-m-text {
+  flex: 1;
+  min-width: 0;
+}
+.cs-m-text small {
+  margin-left: 6px;
+  color: #d8d2f0;
+}
+.cs-m-btn {
+  border: 0;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-family: var(--font-pixel);
+  cursor: pointer;
+  box-shadow: 0 2px 0 var(--px-ink);
+}
+.cs-m-btn.claim {
+  background: var(--px-gold);
+  color: var(--px-ink);
+  animation: px-bounce 1s steps(2) infinite;
+}
+.cs-next {
+  display: block;
+  width: calc(100% - 16px);
+  text-align: left;
+}
+.cs-next-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cs-next-icon {
+  font-size: 28px;
+}
+.cs-next-body {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  font-size: 13px;
+}
+.cs-next-body small {
+  color: #d8d2f0;
+}
+.cs-quick {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.cs-quick .px-card {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  font-size: 12px;
+}
+.cs-quick b {
+  font-family: var(--font-pixel);
+  font-size: 20px;
+  font-weight: 400;
 }
 
+@keyframes px-float {
+  0%,
+  100% {
+    margin-top: 0;
+  }
+  50% {
+    margin-top: -4px;
+  }
+}
+@keyframes px-glow {
+  50% {
+    background: #fff2b8;
+  }
+}
+@keyframes px-on {
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes px-off {
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes px-pop {
+  from {
+    transform: translateX(-50%) scale(0.6);
+  }
+}
 @keyframes px-bob {
   0%,
   100% {
@@ -308,35 +670,68 @@
     transform: translateY(-3px);
   }
 }
-@keyframes px-blink {
-  50% {
-    opacity: 0;
+
+/* two columns: room + status */
+@media (max-width: 1099px) {
+  .club-scene {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+  .cs-left {
+    display: none;
   }
 }
-
-@media (max-width: 720px) {
+/* phones: room, then the member card, then status */
+@media (max-width: 719px) {
   .club-scene {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
     padding: 4px 0 0;
+  }
+  .cs-center {
+    order: 1;
+  }
+  .cs-left {
+    order: 2;
+    position: static;
+    display: grid;
+    grid-template-columns: 76px 1fr;
+    align-items: start;
+  }
+  .cs-portrait {
+    grid-row: span 2;
+    aspect-ratio: 1;
+    margin: 0;
+  }
+  .cs-say {
+    grid-column: 1 / -1;
+  }
+  .cs-role {
+    display: none;
+  }
+  .cs-right {
+    order: 3;
+    position: static;
   }
   .cs-stage {
     width: auto;
     height: min(58dvh, 480px);
   }
-  .cs-vn-line {
-    font-size: 17px;
-  }
-  .cs-chip {
-    font-size: 13px;
-    padding: 3px 8px;
+  .cs-bubble {
+    max-width: 62vw;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .cs-pin,
+  .cs-pin.hot .cs-pin-icon,
   .cs-chibi img,
-  .cs-badge,
-  .cs-chibi.talking::after,
-  .cs-vn-next {
-    animation: none;
+  .cs-m-btn.claim,
+  .cs-bubble,
+  .cs-portrait img {
+    animation: none !important;
+  }
+  .cs-chibi img.f1 {
+    opacity: 0;
   }
 }
 
@@ -361,6 +756,32 @@
   box-shadow: -6px 0 0 var(--px-cream);
   padding: 14px 18px calc(24px + env(safe-area-inset-bottom));
   animation: rp-in 0.18s steps(4);
+}
+/* in the room's right column instead of over the page */
+.rp.inline {
+  position: relative;
+  inset: auto;
+  width: auto;
+  margin: 8px;
+  max-height: calc(100dvh - 96px);
+  border-left: 0;
+  box-shadow:
+    0 0 0 3px var(--px-ink),
+    0 0 0 5px rgba(255, 244, 224, 0.85),
+    0 0 0 8px var(--px-ink);
+}
+.rp-back {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: var(--surface);
+  color: inherit;
+  font-size: 18px;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 2px var(--border-strong);
+}
+.rp-back:hover {
+  background: var(--primary-soft);
 }
 @keyframes rp-in {
   from {
