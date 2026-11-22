@@ -97,8 +97,10 @@ function rememberEntered(v: boolean) {
   }
 }
 
-/** Today's lessons (words, grammar, phrases, review, situation) — shown in 자습. */
-export function TodayTasks({ content, start, go }: Props) {
+export type TaskSection = 'words' | 'grammar' | 'phrases' | 'review' | 'talk';
+
+/** Today's lessons (words, grammar, phrases, review, situation) — shown in 자습, one section at a time with `only`. */
+export function TodayTasks({ content, start, go, only }: Props & { only?: TaskSection }) {
   const p = useProgress();
   const d = today();
   const [open, setOpen] = useState<Item | null>(null);
@@ -115,14 +117,15 @@ export function TodayTasks({ content, start, go }: Props) {
   const phrases = resolve<Phrase>(plan.phrases);
   const situation = todaysSituation(content);
 
+  const show = (s: TaskSection) => !only || only === s;
   return (
     <>
-      <div className="home-grid">
-        <WordsSection words={words} done={!!plan.done.words} start={start} content={content} onOpen={setOpen} />
-        <GrammarSection grammar={grammar} done={!!plan.done.grammar} start={start} content={content} />
-        <PhrasesSection phrases={phrases} done={!!plan.done.phrases} start={start} content={content} />
-        <ReviewSection content={content} start={start} go={go} />
-        {situation && <TalkSection situation={situation} done={!!plan.done.ai} go={go} />}
+      <div className={`home-grid ${only ? 'one' : ''}`}>
+        {show('words') && <WordsSection words={words} done={!!plan.done.words} start={start} content={content} onOpen={setOpen} />}
+        {show('grammar') && <GrammarSection grammar={grammar} done={!!plan.done.grammar} start={start} content={content} />}
+        {show('phrases') && <PhrasesSection phrases={phrases} done={!!plan.done.phrases} start={start} content={content} />}
+        {show('review') && <ReviewSection content={content} start={start} go={go} />}
+        {show('talk') && situation && <TalkSection situation={situation} done={!!plan.done.ai} go={go} />}
       </div>
       {open && (
         <Sheet onClose={() => setOpen(null)}>

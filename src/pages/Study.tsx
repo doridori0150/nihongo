@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useState } from 'react';
 import { Avatar, Bubble } from '../components/Avatar';
 import { Sheet } from '../components/common';
 import { ItemCard } from '../components/ItemCard';
@@ -7,8 +7,8 @@ import { type Content, type Item, isGrammar, isWord, itemMeaning, itemTitle } fr
 import { type Course, COURSES, EXTRA_COURSES, chapters, findCourse } from '../lib/courses';
 import { diffDays, today } from '../lib/date';
 import { deckQuizSession, type Session } from '../lib/sessions';
-import { TodayTasks } from './Home';
-import { DECK_MASTERED, deckDue, deckIds, setInDeck, useProgress } from '../lib/store';
+import { type TaskSection, TodayTasks } from './Home';
+import { DECK_MASTERED, deckDue, deckIds, dueItems, local, setInDeck, useProgress } from '../lib/store';
 
 interface Props {
   content: Content;
@@ -63,7 +63,7 @@ function DeckCard({ content, start, startCards }: Pick<Props, 'content' | 'start
           전체 훑어보기
         </button>
       </div>
-      {!ids.length && <div className="small muted" style={{ marginTop: 10 }}>아래 코스에서 외우고 싶은 항목에 ✓ 체크하면 카드가 만들어져요.</div>}
+      {!ids.length && <div className="small muted" style={{ marginTop: 10 }}>📚 코스 탭에서 외우고 싶은 항목에 ✓ 체크하면 카드가 만들어져요.</div>}
     </section>
   );
 }
@@ -90,17 +90,90 @@ function CourseTile({ course, content, onOpen }: { course: Course; content: Cont
   );
 }
 
+type StudyTab = TaskSection | 'cards' | 'courses';
+
+const TABS: { key: StudyTab; icon: string; label: string }[] = [
+  { key: 'words', icon: '📖', label: '단어' },
+  { key: 'grammar', icon: '🧩', label: '문법' },
+  { key: 'phrases', icon: '💬', label: '표현' },
+  { key: 'review', icon: '🔁', label: '복습' },
+  { key: 'talk', icon: '🗣️', label: '회화' },
+  { key: 'cards', icon: '🃏', label: '암기 카드' },
+  { key: 'courses', icon: '📚', label: '코스' },
+];
+const TAB_KEY = 'nd.studyTab';
+
+/** 자습: today's tasks, flashcards and courses as tabs that stay at the top while you scroll. */
 function StudyHome({ content, go, start, startCards }: Omit<Props, 'sub'>) {
-  const s = say('study', diffDays(today(), '2026-01-01'));
+  const p = useProgress();
+  const d = today();
+  const s = say('study', diffDays(d, '2026-01-01'));
+  const plan = p.days[d];
+  const due = dueItems(p, d).filter((id) => content.byId.has(id)).length;
+  const cardsDue = deckDue(p).filter((id) => content.byId.has(id)).length;
+  const done: Partial<Record<StudyTab, boolean>> = {
+    words: !!plan?.done.words,
+    grammar: !!plan?.done.grammar,
+    phrases: !!plan?.done.phrases,
+    review: !!plan?.done.review || due === 0,
+    talk: !!plan?.done.ai,
+  };
+  const badge: Partial<Record<StudyTab, number>> = { review: due, cards: cardsDue };
+  // open the remembered tab, else the first task not done today
+  const [tab, setTab] = useState<StudyTab>(() => {
+    const saved = local.get(TAB_KEY) as StudyTab | null;
+    if (saved && TABS.some((t) => t.key === saved)) return saved;
+    return TABS.find((t) => t.key in done && !done[t.key])?.key ?? 'cards';
+  });
+  // the tabs stick right under the top bar, whose height changes with the screen width
+  useLayoutEffect(() => {
+    const bar = document.querySelector('.topbar');
+    if (!bar) return;
+    const set = () => document.documentElement.style.setProperty('--topbar-h', `${Math.round(bar.getBoundingClientRect().height)}px`);
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(bar);
+    return () => ro.disconnect();
+  }, []);
+  const pick = (t: StudyTab) => {
+    setTab(t);
+    local.set(TAB_KEY, t);
+    window.scrollTo({ top: 0 });
+  };
+
   return (
-    <div className="page">
+    <div className="page study-page">
       <div className="h1">자습</div>
       <Bubble member={s.member} line={s.line} />
-      <div className="h2">오늘의 과제</div>
-      <TodayTasks content={content} start={start} go={go} />
-      <div className="h2">암기 카드</div>
-      <DeckCard content={content} start={start} startCards={startCards} />
-      <div className="h2">코스</div>
+      <nav className="study-tabs" aria-label="자습 메뉴">
+        <div className="study-tabs-inner" role="tablist">
+          {TABS.map((t) => (
+            <button key={t.key} role="tab" aria-selected={tab === t.key} className={`study-tab ${tab === t.key ? 'on' : ''}`} onClick={() => pick(t.key)}>
+              <span aria-hidden>{t.icon}</span>
+              {t.label}
+              {done[t.key] && t.key !== 'review' ? <span className="st-done">✓</span> : null}
+              {badge[t.key] ? <span className="st-badge">{badge[t.key]}</span> : null}
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      <div className="study-panel" role="tabpanel">
+        {tab === 'cards' ? (
+          <DeckCard content={content} start={start} startCards={startCards} />
+        ) : tab === 'courses' ? (
+          <CourseList content={content} go={go} />
+        ) : (
+          <TodayTasks content={content} start={start} go={go} only={tab} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CourseList({ content, go }: { content: Content; go: (r: string) => void }) {
+  return (
+    <>
       <div className="course-grid">
         {COURSES.map((c) => (
           <CourseTile key={c.id} course={c} content={content} onOpen={() => go(`study-${c.id}`)} />
@@ -123,7 +196,7 @@ function StudyHome({ content, go, start, startCards }: Omit<Props, 'sub'>) {
           <div className="course-sub">모든 단어·문법·문장 찾아보기</div>
         </button>
       </div>
-    </div>
+    </>
   );
 }
 
