@@ -31,4 +31,7 @@ docs/art/bg/*.png
 docs/art/sprites/*.png
 docs/art/key/*.png
 docs/art/key/rejected/
+docs/art/pixel/*.png
+docs/art/pixel/raw/
+docs/art/pixel/generation.json
 docs/voice/samples.html

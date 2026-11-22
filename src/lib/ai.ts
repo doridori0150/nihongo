@@ -406,3 +406,52 @@ export async function clubChat(
   const { data, content } = await call(ChatSchema, system, messages, 'low');
   return { reply: data, raw: content, meta: JSON.stringify(data) };
 }
+
+// ───────── JLPT exam explanations ─────────
+
+const ExplainSchema = z.object({
+  why_correct: z.string().describe('正解がなぜ正しいか(韓国語、2〜3文)'),
+  wrong_options: z
+    .array(z.object({ option: z.string().describe('不正解の選択肢そのまま'), why: z.string().describe('なぜここでは使えないか(韓国語、1〜2文)') }))
+    .describe('正解以外の選択肢すべて'),
+  tip: z.string().describe('同じタイプの問題で使えるコツ(韓国語、1文)'),
+});
+export type QuestionExplain = z.infer<typeof ExplainSchema>;
+
+const LooseExplain = ExplainSchema.extend({
+  wrong_options: ExplainSchema.shape.wrong_options.catch([]),
+  tip: z.string().catch(''),
+});
+
+const JLPT_TEACHER = `あなたは韓国人学習者にJLPT(N3〜N1)を教えるベテラン講師です。
+問題の正解がなぜ正しいか、ほかの選択肢がなぜこの文では使えないかを、韓国語で短く正確に説明する。
+日本語の語句はそのまま書いてよい(ふりがなの括弧は付けない)。推測で事実を作らない。`;
+
+const EXPLAIN_FORMAT = `次のJSONオブジェクトだけを返す:
+{"why_correct": "韓国語", "wrong_options": [{"option": "選択肢", "why": "韓国語"}], "tip": "韓国語"}`;
+
+const explainCache = new Map<string, QuestionExplain>();
+
+export interface ExplainInput {
+  section: string;
+  question: string;
+  options: string[];
+  answer: number;
+  chosen: number | null;
+}
+
+export async function explainQuestion(q: ExplainInput): Promise<QuestionExplain> {
+  const key = JSON.stringify([q.question, q.options, q.answer, q.chosen]);
+  const hit = explainCache.get(key);
+  if (hit) return hit;
+  const user = `【問題の指示】${q.section}
+【問題】${q.question}
+【選択肢】${q.options.map((o, i) => `${i + 1}. ${o}`).join(' / ')}
+【正解】${q.answer + 1}. ${q.options[q.answer]}
+【学習者の答え】${q.chosen === null ? '無回答' : `${q.chosen + 1}. ${q.options[q.chosen]}`}`;
+  const data = inClaude
+    ? await sampleJson(LooseExplain, `${JLPT_TEACHER}\n\n${user}\n\n${EXPLAIN_FORMAT}`, 'quick', true)
+    : (await call(ExplainSchema, JLPT_TEACHER, [{ role: 'user', content: user }], 'low')).data;
+  explainCache.set(key, data);
+  return data;
+}

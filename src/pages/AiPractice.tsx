@@ -21,7 +21,7 @@ import { CLAUDE_APP_URL } from '../lib/links';
 import { type Content, type Example, type Opinion, type Roleplay, type Situation, isExpr, isGrammar, isPhrase, isQuote, isWord } from '../lib/content';
 import { plain } from '../lib/jtext';
 import { today } from '../lib/date';
-import { addAiLog, addXp, getProgress, local, markDone, useProgress } from '../lib/store';
+import { addAiLog, addXp, bumpEv, getProgress, local, markDone, useProgress } from '../lib/store';
 
 type Mode = 'situation' | 'compose' | 'opinion' | 'roleplay';
 
@@ -234,6 +234,7 @@ function QA({ mode, content, back, initialId }: { mode: Exclude<Mode, 'roleplay'
         feedback: g.feedback,
       });
       addXp(2 + Math.round(g.score / 10));
+      bumpEv('chat');
       markDone('ai');
     } catch (e) {
       setError((e as Error).message);
@@ -563,6 +564,7 @@ function RoleplayChat({ rp, back }: { rp: Roleplay; back: () => void }) {
         feedback: ev.summary,
       });
       addXp(5 + Math.round(ev.score / 10));
+      bumpEv('chat');
       markDone('ai');
     } catch (e) {
       setError((e as Error).message);

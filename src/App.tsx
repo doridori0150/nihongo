@@ -4,10 +4,12 @@ import { FlashcardSession } from './components/Flashcards';
 import { Lesson } from './components/Lesson';
 import { StoryPlayer } from './components/StoryPlayer';
 import { ConfirmHost } from './components/confirm';
+import { ExamPlayer } from './components/ExamPlayer';
+import { newlyEarned } from './lib/achievements';
 import { type Content, loadContent } from './lib/content';
 import type { Session } from './lib/sessions';
 import { type Episode, loadEpisode, loadStoryIndex } from './lib/story';
-import { streak, useProgress } from './lib/store';
+import { type ExamLevel, streak, unlockAchievements, useProgress } from './lib/store';
 import { syncNow, useSyncStatus } from './lib/sync';
 import { Home } from './pages/Home';
 import { Notes } from './pages/Notes';
@@ -54,7 +56,9 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [cards, setCards] = useState<string[] | null>(null);
   const [episode, setEpisode] = useState<{ ep: Episode; hasNext: boolean } | null>(null);
+  const [exam, setExam] = useState<ExamLevel | null>(null);
   const [toast, setToast] = useState('');
+  const progress = useProgress();
 
   useEffect(() => {
     loadContent()
@@ -69,6 +73,7 @@ export default function App() {
       setSession(null);
       setCards(null);
       setEpisode(null);
+      setExam(null);
     };
     window.addEventListener('hashchange', onHash);
     window.addEventListener('popstate', onPop);
@@ -92,22 +97,30 @@ export default function App() {
     }
   };
 
-  const showToast = (msg: string) => {
+  const showToast = useCallback((msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(''), 2200);
-  };
+  }, []);
+
+  // record achievements as soon as their goal is reached, and say so
+  useEffect(() => {
+    const fresh = newlyEarned(progress);
+    if (!fresh.length) return;
+    unlockAchievements(fresh.map((a) => a.id));
+    showToast(fresh.length === 1 ? `🏆 업적 달성: ${fresh[0].title}` : `🏆 업적 ${fresh.length}개 달성! 진열장을 확인해 보세요`);
+  }, [progress, showToast]);
 
   const start = useCallback((s: Session | null) => {
     if (!s) return showToast('지금은 할 수 있는 항목이 없어요');
     pushOverlay();
     setSession(s);
-  }, []);
+  }, [showToast]);
 
   const startCards = useCallback((ids: string[]) => {
     if (!ids.length) return showToast('넘길 카드가 없어요');
     pushOverlay();
     setCards(ids);
-  }, []);
+  }, [showToast]);
 
   const play = useCallback(async (id: string) => {
     try {
@@ -118,7 +131,7 @@ export default function App() {
     } catch (e) {
       showToast((e as Error).message);
     }
-  }, []);
+  }, [showToast]);
 
   const playNext = useCallback(async () => {
     if (!episode) return;
@@ -130,12 +143,18 @@ export default function App() {
     setEpisode({ ep, hasNext: i + 2 < list.length });
   }, [episode]);
 
+  const startExam = useCallback((level: ExamLevel) => {
+    pushOverlay();
+    setExam(level);
+  }, []);
+
   const closeOverlay = useCallback(() => {
     if (history.state?.lesson) history.back();
     else {
       setSession(null);
       setCards(null);
       setEpisode(null);
+      setExam(null);
     }
   }, []);
 
@@ -165,7 +184,7 @@ export default function App() {
     <ArtContext.Provider value={content.characters}>
       <div className="app">
         <TopBar tab={tab} go={go} />
-        {page === 'home' && <Home content={content} start={start} go={go} play={play} />}
+        {page === 'home' && <Home content={content} start={start} go={go} play={play} startExam={startExam} toast={showToast} />}
         {page === 'story' && <Story content={content} play={play} />}
         {page === 'study' && <Study content={content} sub={sub} go={go} start={start} startCards={startCards} />}
         {page === 'library' && <Shelf content={content} sub={sub} go={go} />}
@@ -201,6 +220,7 @@ export default function App() {
         )}
         {cards && <FlashcardSession key={cards.join()} ids={cards} content={content} onExit={closeOverlay} />}
         {episode && <StoryPlayer key={episode.ep.id} ep={episode.ep} content={content} hasNext={episode.hasNext} onExit={closeOverlay} onNext={playNext} />}
+        {exam && <ExamPlayer key={exam} content={content} level={exam} onExit={closeOverlay} />}
         {toast && <div className="toast">{toast}</div>}
         <ConfirmHost />
       </div>

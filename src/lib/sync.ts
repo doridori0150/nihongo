@@ -123,7 +123,9 @@ function storedCore(p: Progress) {
   const cutoff = addDays(today(), -45);
   const { ai: _ai, ...core } = p;
   void _ai;
-  return { ...core, days: Object.fromEntries(Object.entries(core.days).filter(([d]) => d >= cutoff)) };
+  const recent = <T,>(rec: Record<string, T> | undefined) => Object.fromEntries(Object.entries(rec ?? {}).filter(([d]) => d >= cutoff));
+  // ev stays whole: the achievements count it over all time (a few dozen bytes a day)
+  return { ...core, days: recent(core.days), exams: recent(core.exams), claims: recent(core.claims) };
 }
 
 async function syncClaude() {

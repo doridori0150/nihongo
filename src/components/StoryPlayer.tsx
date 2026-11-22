@@ -3,7 +3,7 @@ import { CAST, type MemberId } from '../lib/cast';
 import type { Content } from '../lib/content';
 import { kana, plain } from '../lib/jtext';
 import { sfx, speak } from '../lib/speech';
-import { addXp, local, setInDeck, useProgress } from '../lib/store';
+import { addXp, bumpEv, local, setInDeck, useProgress } from '../lib/store';
 import {
   type ChoiceOption,
   type Episode,
@@ -89,6 +89,7 @@ export function StoryPlayer({ ep, content, hasNext, onExit, onNext }: Props) {
       if (!top) {
         completeEpisode(ep.id);
         addXp(15);
+        bumpEv('story');
         sfx.done();
         setView((v) => ({ ...v, line: null, choice: null, ended: true }));
         return;

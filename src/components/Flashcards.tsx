@@ -3,7 +3,7 @@ import { say } from '../lib/cast';
 import { type Content, type Item, MEDIUM_LABEL, isExpr, isGrammar, isPhrase, isQuote, isWord } from '../lib/content';
 import { kana } from '../lib/jtext';
 import { sfx, speak } from '../lib/speech';
-import { type CardRating, addAccuracy, addXp, rateCards, useProgress } from '../lib/store';
+import { type CardRating, addAccuracy, addXp, bumpEv, rateCards, useProgress } from '../lib/store';
 import { Bubble } from './Avatar';
 import { askConfirm } from './confirm';
 import { JP, Speak, WordRuby } from './JP';
@@ -126,6 +126,7 @@ export function FlashcardSession({ ids, content, onExit }: { ids: string[]; cont
       if (!end) return setIdx(idx + 1);
       const results = Object.entries(nextFirst).map(([cid, rating]) => ({ id: cid, rating }));
       rateCards(results);
+      bumpEv('cards', results.length);
       const known = results.filter((x) => x.rating === 'good').length;
       addAccuracy(known, results.length - known);
       const xp = Math.ceil(results.length / 2) + known;

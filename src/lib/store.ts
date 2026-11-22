@@ -66,6 +66,23 @@ export interface Progress {
   deck: Record<string, DeckRec>;
   /** visual-novel story progress */
   story?: StoryProgress;
+  /** ev[date][deviceId][key] — activity counters for missions/achievements, merged like xp */
+  ev?: Record<string, Record<string, Partial<Record<EvKey, number>>>>;
+  /** exams[date][level] — best daily-exam score of the day */
+  exams?: Record<string, Partial<Record<ExamLevel, ExamRec>>>;
+  /** claims[date] — mission ids whose reward was taken */
+  claims?: Record<string, string[]>;
+  /** ach[id] — first time an achievement was earned (ms) */
+  ach?: Record<string, number>;
+}
+
+export type EvKey = 'words' | 'grammar' | 'phrases' | 'review' | 'cards' | 'chat' | 'story' | 'exam' | 'examGood';
+export type ExamLevel = 'N3' | 'N2' | 'N1';
+
+export interface ExamRec {
+  score: number;
+  total: number;
+  at: number;
 }
 
 export interface DeckRec {
@@ -340,6 +357,59 @@ export function streak(p: Progress, date = today()): { days: number; todayDone: 
   return { days, todayDone };
 }
 
+// ───────── activity counters / exams / missions / achievements ─────────
+
+/** Count an activity for today's missions and the achievements. */
+export function bumpEv(key: EvKey, n = 1) {
+  if (n <= 0) return;
+  const d = today();
+  update((p) => {
+    const day = { ...(p.ev?.[d] ?? {}) };
+    const mine = { ...(day[deviceId] ?? {}) };
+    mine[key] = (mine[key] ?? 0) + n;
+    day[deviceId] = mine;
+    return { ...p, ev: { ...p.ev, [d]: day } };
+  });
+}
+
+export function evOn(p: Progress, date: string, key: EvKey): number {
+  return Object.values(p.ev?.[date] ?? {}).reduce((sum, dev) => sum + (dev[key] ?? 0), 0);
+}
+
+export function evTotal(p: Progress, key: EvKey): number {
+  return Object.keys(p.ev ?? {}).reduce((sum, d) => sum + evOn(p, d, key), 0);
+}
+
+/** Keep the best score per level and day. Returns true when this was the first attempt today at that level. */
+export function recordExam(level: ExamLevel, score: number, total: number): boolean {
+  const d = today();
+  const first = !getProgress().exams?.[d]?.[level];
+  update((p) => {
+    const day = { ...(p.exams?.[d] ?? {}) };
+    const prev = day[level];
+    if (!prev || score > prev.score) day[level] = { score, total, at: Date.now() };
+    return { ...p, exams: { ...p.exams, [d]: day } };
+  });
+  return first;
+}
+
+export function claimMission(id: string, date = today()) {
+  update((p) => {
+    const have = p.claims?.[date] ?? [];
+    if (have.includes(id)) return p;
+    return { ...p, claims: { ...p.claims, [date]: [...have, id] } };
+  });
+}
+
+export function unlockAchievements(ids: string[]) {
+  const now = Date.now();
+  update((p) => {
+    const ach = { ...(p.ach ?? {}) };
+    for (const id of ids) ach[id] ??= now;
+    return { ...p, ach };
+  });
+}
+
 // ───────── day plan / settings / ai log ─────────
 
 export function setDayPlan(date: string, plan: DayPlan) {
@@ -401,6 +471,30 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     const mine = deck[id];
     if (!mine || rec.u > mine.u) deck[id] = rec;
   }
+  const ev: NonNullable<Progress['ev']> = { ...(a.ev ?? {}) };
+  for (const [d, devs] of Object.entries(b.ev ?? {})) {
+    const merged = { ...(ev[d] ?? {}) };
+    for (const [dev, counts] of Object.entries(devs)) {
+      // counters only grow on a device, so the larger value per key is the newer one
+      const mine = { ...(merged[dev] ?? {}) };
+      for (const [k, n] of Object.entries(counts) as [EvKey, number][]) mine[k] = Math.max(mine[k] ?? 0, n);
+      merged[dev] = mine;
+    }
+    ev[d] = merged;
+  }
+  const exams: NonNullable<Progress['exams']> = { ...(a.exams ?? {}) };
+  for (const [d, levels] of Object.entries(b.exams ?? {})) {
+    const merged = { ...(exams[d] ?? {}) };
+    for (const [lv, rec] of Object.entries(levels) as [ExamLevel, ExamRec][]) {
+      const mine = merged[lv];
+      if (!mine || rec.score > mine.score) merged[lv] = rec;
+    }
+    exams[d] = merged;
+  }
+  const claims: NonNullable<Progress['claims']> = { ...(a.claims ?? {}) };
+  for (const [d, ids] of Object.entries(b.claims ?? {})) claims[d] = [...new Set([...(claims[d] ?? []), ...ids])];
+  const ach: NonNullable<Progress['ach']> = { ...(a.ach ?? {}) };
+  for (const [id, t] of Object.entries(b.ach ?? {})) ach[id] = Math.min(t, ach[id] ?? t);
   const seenAi = new Set<string>();
   const ai = [...a.ai, ...b.ai]
     .filter((e) => (seenAi.has(e.id) ? false : (seenAi.add(e.id), true)))
@@ -417,6 +511,10 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     ai,
     deck,
     story: mergeStory(a.story, b.story),
+    ev,
+    exams,
+    claims,
+    ach,
   };
 }
 

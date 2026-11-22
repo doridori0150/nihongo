@@ -1,0 +1,263 @@
+{
+  "room_day": {
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGB",
+    "uniform_4x4_blocks": true,
+    "colors": 48
+  },
+  "room_evening": {
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGB",
+    "uniform_4x4_blocks": true,
+    "colors": 48
+  },
+  "chibi_saeko": {
+    "size": [
+      1024,
+      1024
+    ],
+    "mode": "RGBA",
+    "uniform_4x4_blocks": true,
+    "alpha_corners": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "alpha_values": [
+      0,
+      255
+    ],
+    "bbox": [
+      324,
+      276,
+      700,
+      992
+    ],
+    "height_percent": 69.92,
+    "bottom_margin": 32,
+    "opaque_colors": 48
+  },
+  "chibi_minato": {
+    "size": [
+      1024,
+      1024
+    ],
+    "mode": "RGBA",
+    "uniform_4x4_blocks": true,
+    "alpha_corners": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "alpha_values": [
+      0,
+      255
+    ],
+    "bbox": [
+      340,
+      276,
+      680,
+      992
+    ],
+    "height_percent": 69.92,
+    "bottom_margin": 32,
+    "opaque_colors": 48
+  },
+  "chibi_shizuku": {
+    "size": [
+      1024,
+      1024
+    ],
+    "mode": "RGBA",
+    "uniform_4x4_blocks": true,
+    "alpha_corners": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "alpha_values": [
+      0,
+      255
+    ],
+    "bbox": [
+      300,
+      276,
+      720,
+      992
+    ],
+    "height_percent": 69.92,
+    "bottom_margin": 32,
+    "opaque_colors": 48
+  },
+  "chibi_ritsu": {
+    "size": [
+      1024,
+      1024
+    ],
+    "mode": "RGBA",
+    "uniform_4x4_blocks": true,
+    "alpha_corners": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "alpha_values": [
+      0,
+      255
+    ],
+    "bbox": [
+      308,
+      276,
+      712,
+      992
+    ],
+    "height_percent": 69.92,
+    "bottom_margin": 32,
+    "opaque_colors": 48
+  },
+  "chibi_hiyori": {
+    "size": [
+      1024,
+      1024
+    ],
+    "mode": "RGBA",
+    "uniform_4x4_blocks": true,
+    "alpha_corners": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "alpha_values": [
+      0,
+      255
+    ],
+    "bbox": [
+      256,
+      276,
+      768,
+      992
+    ],
+    "height_percent": 69.92,
+    "bottom_margin": 32,
+    "opaque_colors": 48
+  },
+  "chibi_akane": {
+    "size": [
+      1024,
+      1024
+    ],
+    "mode": "RGBA",
+    "uniform_4x4_blocks": true,
+    "alpha_corners": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "alpha_values": [
+      0,
+      255
+    ],
+    "bbox": [
+      272,
+      276,
+      752,
+      992
+    ],
+    "height_percent": 69.92,
+    "bottom_margin": 32,
+    "opaque_colors": 48
+  },
+  "chibi_keita": {
+    "size": [
+      1024,
+      1024
+    ],
+    "mode": "RGBA",
+    "uniform_4x4_blocks": true,
+    "alpha_corners": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "alpha_values": [
+      0,
+      255
+    ],
+    "bbox": [
+      352,
+      304,
+      668,
+      992
+    ],
+    "height_percent": 67.19,
+    "bottom_margin": 32,
+    "opaque_colors": 48
+  },
+  "chibi_mei": {
+    "size": [
+      1024,
+      1024
+    ],
+    "mode": "RGBA",
+    "uniform_4x4_blocks": true,
+    "alpha_corners": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "alpha_values": [
+      0,
+      255
+    ],
+    "bbox": [
+      328,
+      276,
+      692,
+      992
+    ],
+    "height_percent": 69.92,
+    "bottom_margin": 32,
+    "opaque_colors": 48
+  },
+  "chibi_sota": {
+    "size": [
+      1024,
+      1024
+    ],
+    "mode": "RGBA",
+    "uniform_4x4_blocks": true,
+    "alpha_corners": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "alpha_values": [
+      0,
+      255
+    ],
+    "bbox": [
+      324,
+      276,
+      700,
+      992
+    ],
+    "height_percent": 69.92,
+    "bottom_margin": 32,
+    "opaque_colors": 48
+  }
+}

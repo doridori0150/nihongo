@@ -1,20 +1,20 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Avatar, Portrait } from '../components/Avatar';
+import { ClubScene } from '../components/ClubScene';
 import { Sheet } from '../components/common';
+import type { PanelActions } from '../components/RoomPanel';
 import { CAST, CLUB, type MemberId, gradeOf, membersFor, say } from '../lib/cast';
-import { plain } from '../lib/jtext';
-import { todaysQuote } from './Quotes';
 import { ItemCard } from '../components/ItemCard';
 import { JP, Speak } from '../components/JP';
 import { getApiKey } from '../lib/aiKey';
 import { type Content, type Grammar, type Item, type Phrase, type Situation, type Word, SRC_LABEL } from '../lib/content';
 import { ensureTodayPlan, hash } from '../lib/daily';
 import { addDays, diffDays, formatKo, today } from '../lib/date';
-import { CHANNELS, dajareOf, langChanSearch, ytSearch } from '../lib/fun';
+import { CHANNELS, langChanSearch, ytSearch } from '../lib/fun';
 import { type Light, type LevelProgress, levelLabel, levelProgress, overall, signals } from '../lib/level';
 import { requestAi } from '../lib/nav';
 import { Backdrop } from '../components/Stage';
-import { MONTH_KO, nextEpisode, storyYear, useStoryIndex } from '../lib/story';
+import { storyYear } from '../lib/story';
 import { inClaude } from '../lib/runtime';
 import {
   extraWordsSession,
@@ -32,7 +32,7 @@ import {
   todayPracticeSession,
   wordsSession,
 } from '../lib/sessions';
-import { STAGE_GRADUATED, dueItems, local, streak, totalXp, useProgress } from '../lib/store';
+import { type ExamLevel, STAGE_GRADUATED, dueItems, local, streak, totalXp, useProgress } from '../lib/store';
 
 interface Props {
   content: Content;
@@ -40,10 +40,16 @@ interface Props {
   go: (route: string) => void;
 }
 
-/** 부실: a title screen over the club room art; entering dims the room and opens the club menu on top. */
-export function Home({ content, start, go, play }: Props & { play: (id: string) => void }) {
+/** 부실: a title screen over the club room art; entering opens the pixel-art club room scene. */
+export function Home({
+  content,
+  start,
+  go,
+  play,
+  startExam,
+  toast,
+}: Props & { play: (id: string) => void; startExam: (level: ExamLevel) => void; toast: (msg: string) => void }) {
   const p = useProgress();
-  void start;
   const [inside, setInside] = useState(wasEntered);
   const enter = (v: boolean) => {
     rememberEntered(v);
@@ -65,7 +71,7 @@ export function Home({ content, start, go, play }: Props & { play: (id: string) 
         )}
       </div>
       {inside ? (
-        <RoomInside content={content} go={go} play={play} onLeave={() => enter(false)} />
+        <RoomInside actions={{ content, go, play, start, startExam, toast }} onLeave={() => enter(false)} />
       ) : (
         <RoomTitle onEnter={() => enter(true)} art={keyArt && keyBase + keyArt} tall={keyTall && keyBase + keyTall} />
       )}
@@ -172,125 +178,26 @@ function RoomTitle({ onEnter, art, tall }: { onEnter: () => void; art?: string; 
   );
 }
 
-function RoomInside({ content, go, play, onLeave }: { content: Content; go: (r: string) => void; play: (id: string) => void; onLeave: () => void }) {
+function RoomInside({ actions, onLeave }: { actions: PanelActions; onLeave: () => void }) {
+  const { content } = actions;
   const p = useProgress();
   const d = today();
-  const list = useStoryIndex();
-  const next = list ? nextEpisode(list, p) : undefined;
   const due = dueItems(p, d).filter((id) => content.byId.has(id)).length;
   const sig = signals(p, content, p.days[d]);
-  const all = overall(sig);
-  const lp = levelProgress(p, content);
-  const st = streak(p);
   const allDone = sig[0].light === 'green' && sig[1].light === 'green';
   const seed = diffDays(d, '2026-01-01');
   const [profile, setProfile] = useState<MemberId | null>(null);
   const [dash, setDash] = useState(false);
-  const [djOffset, setDjOffset] = useState(0);
   const greet = allDone ? say('allDone', seed) : due > 0 ? say('reviewDue', seed) : say(new Date().getHours() < 11 ? 'greetMorning' : 'greet', seed);
   const year = storyYear(p);
   const members = membersFor(year);
-  const quote = todaysQuote(content, 'anime');
-  const dj = dajareOf(seed + djOffset);
-  const resuming = !!next && p.story?.pos?.ep === next.id;
+  useEffect(() => {
+    ensureTodayPlan(content);
+  }, [content, d]);
 
   return (
-    <div className="room-inside">
-      <div className="ri-top">
-        <div className="ri-sign">
-          <span className="room-plate">305</span> {CLUB.name}
-        </div>
-        <button className="ri-ghost" onClick={onLeave}>
-          🖼 그림 보기
-        </button>
-      </div>
-
-      <div className="ri-greet ri-glass">
-        <Avatar id={greet.member.id} size={48} title />
-        <div className="ri-greet-body">
-          <div className="ri-name" style={{ color: greet.member.color }}>
-            {greet.member.name}
-          </div>
-          <div className="ri-line">
-            <JP text={greet.line.jp} />
-          </div>
-          <div className="ri-ko">{greet.line.ko}</div>
-        </div>
-      </div>
-
-      <button className="ri-status ri-glass" onClick={() => setDash(true)} aria-label="학습 현황 자세히">
-        <TrafficLight light={all.light} />
-        <span className="ri-stat">🔥 {st.days}일</span>
-        <span className="ri-stat">{levelLabel(lp)}</span>
-        <span className="ri-stat">오늘 {sig[0].value}</span>
-        <span className="ri-stat">복습 {sig[1].value}</span>
-        <span className="ri-more">자세히 ›</span>
-      </button>
-
-      <div className="ri-menu">
-        <button className="ri-tile story" onClick={() => (next ? play(next.id) : go('story'))}>
-          <span className="ri-icon">📖</span>
-          <span className="ri-tile-text">
-            <span className="ri-tile-title">{next ? (resuming ? '스토리 이어하기' : '스토리 다음 화') : '메인 스토리'}</span>
-            {next && (
-              <span className="ri-tile-sub">
-                {next.year}학년 {MONTH_KO[next.month]} · 第{next.no}話 <JP text={next.title} />
-              </span>
-            )}
-          </span>
-          <span className="ri-go">▶</span>
-        </button>
-        <button className="ri-tile" onClick={() => go('talk')}>
-          <span className="ri-icon">💬</span>
-          <span className="ri-tile-title">대화</span>
-          <span className="ri-tile-sub">부원과 잡담</span>
-        </button>
-        <button className="ri-tile" onClick={() => go('study')}>
-          <span className="ri-icon">✏️</span>
-          <span className="ri-tile-title">자습</span>
-          <span className="ri-tile-sub">
-            오늘 {sig[0].value}
-            {due > 0 ? ` · 복습 ${due}` : ''}
-          </span>
-        </button>
-        <button className="ri-tile" onClick={() => go('library')}>
-          <span className="ri-icon">📚</span>
-          <span className="ri-tile-title">도서관</span>
-          <span className="ri-tile-sub">명대사·단어장</span>
-        </button>
-      </div>
-
-      <div className="ri-members">
-        {members.map((id) => (
-          <button key={id} className="member-btn" onClick={() => setProfile(id)} aria-label={`${CAST[id].name_ko} 소개`}>
-            <Avatar id={id} size={36} title />
-          </button>
-        ))}
-        <span className="ri-hint">부원을 누르면 소개</span>
-      </div>
-
-      <div className="ri-extras">
-        {quote && (
-          <button className="ri-card ri-glass" onClick={() => go('quotes-anime')}>
-            <div className="ri-card-head">🎌 오늘의 명대사</div>
-            <div className="ri-quote jp">{plain(quote.line)}</div>
-            <div className="ri-card-foot">원작 출처 · {quote.work_ko} ›</div>
-          </button>
-        )}
-        <div className="ri-card ri-glass">
-          <div className="ri-card-head">
-            🤣 오늘의 아재개그
-            <button className="ri-ghost small" onClick={() => setDjOffset(djOffset + 1)}>
-              하나 더
-            </button>
-          </div>
-          <div className="row" style={{ gap: 6 }}>
-            <JP text={dj.jp} />
-            <Speak jtext={dj.jp} small />
-          </div>
-          <div className="ri-card-foot">“{dj.ko}”</div>
-        </div>
-      </div>
+    <div className="room-inside scene-mode">
+      <ClubScene actions={actions} greet={greet} onDash={() => setDash(true)} onProfile={setProfile} onLeave={onLeave} />
 
       {dash && (
         <Sheet onClose={() => setDash(false)}>

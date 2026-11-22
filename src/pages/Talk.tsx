@@ -10,7 +10,7 @@ import { kana } from '../lib/jtext';
 import { CLAUDE_APP_URL } from '../lib/links';
 import { inClaude } from '../lib/runtime';
 import { speak } from '../lib/speech';
-import { addAiLog, addXp, local, markDone, useProgress } from '../lib/store';
+import { addAiLog, addXp, bumpEv, local, markDone, useProgress } from '../lib/store';
 import { fill, playerName, storyYear } from '../lib/story';
 import { getApiKey } from '../lib/aiKey';
 import { AiPractice } from './AiPractice';
@@ -164,6 +164,7 @@ function ClubChat({ member, content, onExit }: { member: MemberId; content: Cont
         feedback: ev.summary,
       });
       addXp(5 + Math.round(ev.score / 10));
+      bumpEv('chat');
       markDone('ai');
     } catch (e) {
       setGradeError((e as Error).message);

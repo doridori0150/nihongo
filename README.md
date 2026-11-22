@@ -13,7 +13,7 @@
 
 | 탭 | 내용 |
 |---|---|
-| 🏫 부실 | 부원이 모두 모인 부실 일러스트, 오늘의 한마디, 이어하기 |
+| 🏫 부실 | 도트(픽셀아트) 부실 305호. 가구를 누르면 오른쪽 패널이 열림: 책상=JLPT 데일리 시험(N3/N2/N1, 10문항, 채점 후 해설·AI 해설), 화이트보드=오늘의 미션(보상 XP), 피규어 진열장=업적, 책장=자습·도서관, 소파=대화, 포스터=스토리, 냉장고=아재개그, 창문=명대사. 부원을 누르면 대사창에 한마디. 17시 이후엔 저녁 배경 |
 | 📖 스토리 | 메인 스토리 1학년 4월 ~ 3학년 졸업, 108화(월 3화). 2학년부터 アカネ·ケイタ, 3학년부터 メイ·ソウタ 합류. 마지막 화는 3학년 동안의 선택(관계 선택지)으로 6명 중 한 명과의 엔딩 대사는 일본어, 탭하면 한국어. 밑줄 표현은 눌러서 암기 카드에 저장, ★로 대사 저장. 선택지에 따라 친밀도 변화 |
 | ✏️ 자습 | 오늘의 과제(단어·문법·문장·복습), 암기 카드, N3/N2 단어·문법·오타쿠 용어 코스(체크하면 카드에 등록) |
 | 📚 도서관 | 출처가 있는 명대사(애니·만화·드라마·소설), 저장한 대사, 단어장 검색, 유튜브 추천 |
@@ -82,6 +82,7 @@ node scripts/artifact-page.mjs <영문 경로>/nd-artifact
 | `public/sprites/` | 스탠딩 `<캐릭터>_<표정>.webp` (표정이 없으면 normal로 대체) | 720×1080 WebP(투명) |
 | `public/characters/` | 프로필 초상 | 512px JPEG |
 | `public/key/` | 부실 대표 일러스트 (`_tall`은 폰용 세로) | JPEG |
+| `public/pixel/` | 도트 부실 `room_day`/`room_evening`(1536×1024)과 부원 SD `chibi_<id>`(투명). 의뢰서 `docs/art/PIXEL_BRIEF.md`, 가구 클릭 영역은 `src/lib/scene.ts` | WebP |
 
 파일을 넣고 콘텐츠를 빌드하면 `data/art.json`에 자동 반영되고, 없는 그림은 그라데이션·초상 카드로 대체됩니다.
 
@@ -92,7 +93,9 @@ content-src/        원본 콘텐츠(JSON) + 규격, story/ 대본
 docs/story/         스토리 바이블
 scripts/            콘텐츠 검증·빌드(art.json, story-index 포함), artifact 페이지 생성
 src/lib/            jtext(후리가나), story(진행·친밀도), store(기록·복습·카드), cast(부원),
-                    ai(Claude 채점·잡담), sync(Gist / claude.ai db), runtime(claude.ai 감지)
-src/components/     StoryPlayer(VN 엔진), Stage(배경·스탠딩·대사창), Lesson, Flashcards
+                    ai(Claude 채점·잡담·시험 해설), sync(Gist / claude.ai db), runtime(claude.ai 감지),
+                    exam(JLPT 데일리 문제 은행), missions(오늘의 미션), achievements(업적), scene(부실 가구 좌표)
+src/components/     StoryPlayer(VN 엔진), Stage(배경·스탠딩·대사창), Lesson, Flashcards,
+                    ClubScene(도트 부실), RoomPanel(가구별 패널), ExamPlayer(시험·해설)
 src/pages/          Home(부실), Story, Study(자습), Shelf(도서관), Talk(대화), Settings …
 ```

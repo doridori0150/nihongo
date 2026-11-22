@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import './club.css';
 import './vn.css';
+import './scene.css';
 import App from './App.tsx';
 import { inClaude } from './lib/runtime';
 import { local } from './lib/store';

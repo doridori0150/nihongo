@@ -3,7 +3,7 @@ import { type Content, type Grammar, type Item, type Phrase, type Word } from '.
 import { pickFresh, pickNew } from './daily';
 import { today } from './date';
 import { type Exercise, buildGrammarLesson, buildPhraseLesson, buildReview, buildWordLesson, shuffle } from './quiz';
-import { addAccuracy, addXp, dueItems, getProgress, markDone, rateCards, recordLearned, recordReviewed, STAGE_GRADUATED, type TaskKey } from './store';
+import { addAccuracy, addXp, bumpEv, dueItems, getProgress, markDone, rateCards, recordLearned, recordReviewed, STAGE_GRADUATED, type TaskKey } from './store';
 
 export interface Session {
   title: string;
@@ -22,6 +22,14 @@ function resolve<T extends Item>(c: Content, ids: string[]): T[] {
   return ids.map((id) => c.byId.get(id)).filter(Boolean) as T[];
 }
 
+/** Count learned items by kind for missions and achievements. */
+function countLearned(items: { id: string }[]) {
+  const n = (prefix: string) => items.filter((x) => x.id.startsWith(prefix)).length;
+  bumpEv('words', n('w:'));
+  bumpEv('grammar', n('g:'));
+  bumpEv('phrases', n('p:'));
+}
+
 function learnSession(title: string, task: TaskKey | null, exercises: Exercise[]): Session {
   return {
     title,
@@ -30,6 +38,7 @@ function learnSession(title: string, task: TaskKey | null, exercises: Exercise[]
       // mark the task first so today's plan isn't re-picked once the items count as seen
       if (task) markDone(task);
       recordLearned(r.items);
+      countLearned(r.items);
       const xp = xpFor(r);
       addXp(xp);
       return xp;
@@ -110,6 +119,7 @@ export function reviewSession(c: Content): Session | null {
     exercises: buildReview(items, c),
     onFinish: (r) => {
       recordReviewed(r.items);
+      bumpEv('review', r.items.length);
       if (dueItems(getProgress()).length === 0) markDone('review');
       const xp = xpFor(r);
       addXp(xp);
